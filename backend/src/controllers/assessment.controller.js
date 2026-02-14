@@ -5,6 +5,10 @@ import { Attempt } from "../models/attempt.model.js"
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+import path from "path";
+import axios from "axios";
+
+
 const startAssessment = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
@@ -51,18 +55,33 @@ const submitAnswer = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Question not found");
     }
 
-    // 🔥 TEMP: Dummy score (until Python integration)
-    const questionScore = Math.floor(Math.random() * 40) + 60;
+    if (!req.file) {
+        throw new ApiError(400, "Audio file is required");
+    }
+
+    // Send audio path to Python
+    const pythonResponse = await axios.post(
+        "http://127.0.0.1:8000/analyze",
+        {
+            file_path: path.resolve(req.file.path)
+        }
+    );
+
+    const { transcript, confidence_score } = pythonResponse.data;
+
+    const questionScore = confidence_score;
+
 
     // Create Attempt
     await Attempt.create({
-        session: session._id,
-        question: currentQuestion._id,
-        transcript: "Temporary transcript",
-        score: questionScore,
-        weight: currentQuestion.weight,
-        submittedEarly: submittedEarly || false
-    });
+    session: session._id,
+    question: currentQuestion._id,
+    transcript,
+    score: questionScore,
+    weight: currentQuestion.weight,
+    submittedEarly: submittedEarly || false
+});
+
 
     // Move to next question
     session.currentQuestionIndex += 1;
@@ -72,6 +91,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     const nextQuestion = await Question.findOne({
         order: session.currentQuestionIndex + 1
     });
+
 
     // If NO next question → finish assessment
     if (!nextQuestion) {
