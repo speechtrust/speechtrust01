@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Session } from "../models/session.model.js";
-import { Question } from "../models/Question.model.js";
+import { Question } from "../models/question.model.js";
+import { Attempt } from "../models/attempt.model.js"
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
@@ -32,12 +33,88 @@ const startAssessment = asyncHandler(async (req, res) => {
         );
 });
 
-const Submitanswer = asyncHandler((req, res) => {
+const submitAnswer = asyncHandler(async (req, res) => {
+    const { sessionId, submittedEarly } = req.body;
 
+    const session = await Session.findById(sessionId);
+
+    if (!session || session.status !== "active") {
+        throw new ApiError(400, "Invalid or completed session");
+    }
+
+    // Get current question
+    const currentQuestion = await Question.findOne({
+        order: session.currentQuestionIndex + 1
+    });
+
+    if (!currentQuestion) {
+        throw new ApiError(404, "Question not found");
+    }
+
+    // 🔥 TEMP: Dummy score (until Python integration)
+    const questionScore = Math.floor(Math.random() * 40) + 60;
+
+    // Create Attempt
+    await Attempt.create({
+        session: session._id,
+        question: currentQuestion._id,
+        transcript: "Temporary transcript",
+        score: questionScore,
+        weight: currentQuestion.weight,
+        submittedEarly: submittedEarly || false
+    });
+
+    // Move to next question
+    session.currentQuestionIndex += 1;
+    await session.save();
+
+    // Check if next question exists
+    const nextQuestion = await Question.findOne({
+        order: session.currentQuestionIndex + 1
+    });
+
+    // If NO next question → finish assessment
+    if (!nextQuestion) {
+
+        const attempts = await Attempt.find({ session: session._id });
+
+        let totalWeightedScore = 0;
+        let totalWeight = 0;
+
+        attempts.forEach(a => {
+            totalWeightedScore += a.score * a.weight;
+            totalWeight += a.weight;
+        });
+
+        const finalScore =
+            totalWeight === 0
+                ? 0
+                : Math.round(totalWeightedScore / totalWeight);
+
+        session.status = "completed";
+        session.totalScore = finalScore;
+        await session.save();
+
+        // Calculate duration
+        const durationMs = session.updatedAt - session.createdAt;
+        const durationSeconds = Math.floor(durationMs / 1000);
+
+        return res.status(200).json({
+            completed: true,
+            finalScore,
+            duration: durationSeconds
+        });
+    }
+
+    return res.status(200).json({
+        completed: false,
+        nextQuestion
+    });
 });
+
 
 const finishAssessment = asyncHandler((req, res) => {
 
 });
 
-export { startAssessment, Submitanswer, finishAssessment };
+export { startAssessment, submitAnswer, finishAssessment };

@@ -1,15 +1,20 @@
 import multer from "multer";
+import fs from "fs";
+
+const uploadPath = "uploads/";
+
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + ".wav");
+    const ext = file.originalname.split('.').pop();
+    cb(null, Date.now() + "." + ext);
   }
 });
 
-const upload = multer({ storage });
-
-export default upload;
-
+export const upload = multer({ storage });
