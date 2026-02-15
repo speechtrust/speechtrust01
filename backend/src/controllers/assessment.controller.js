@@ -63,9 +63,12 @@ const submitAnswer = asyncHandler(async (req, res) => {
     const pythonResponse = await axios.post(
         "http://127.0.0.1:8000/analyze",
         {
-            file_path: path.resolve(req.file.path)
+            file_path: path.resolve(req.file.path),
+            question_text: currentQuestion.text
         }
     );
+
+    console.log(pythonResponse.data);
 
     const { transcript, confidence_score } = pythonResponse.data;
 
