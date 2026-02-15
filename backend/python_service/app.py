@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import whisper
+import librosa
 import os
 
 app = FastAPI()
 
-# Load model once at startup (important!)
 model = whisper.load_model("base")
 
 class AudioRequest(BaseModel):
@@ -19,24 +19,76 @@ def analyze_audio(request: AudioRequest):
     if not os.path.exists(file_path):
         return {"error": "File not found"}
 
-    # Transcribe using Whisper
+    # Transcribe
     result = model.transcribe(file_path)
-
     transcript = result["text"]
 
-    # 🔥 Temporary simple scoring logic
-    word_count = len(transcript.split())
+    # ------------------------
+    # 1️⃣ Word Count
+    # ------------------------
+    words = transcript.split()
+    word_count = len(words)
 
     if word_count < 5:
-        confidence_score = 50
+        base_score = 50
     elif word_count < 15:
-        confidence_score = 65
+        base_score = 65
     elif word_count < 30:
-        confidence_score = 75
+        base_score = 75
     else:
-        confidence_score = 85
+        base_score = 85
+
+    # ------------------------
+    # 2️⃣ Filler Detection
+    # ------------------------
+    fillers = [
+        "um", "uh", "ah", "like",
+        "you know", "basically", "actually"
+    ]
+
+    transcript_lower = transcript.lower()
+    filler_count = 0
+
+    for filler in fillers:
+        filler_count += transcript_lower.count(filler)
+
+    if filler_count >= 5:
+        filler_penalty = 10
+    elif filler_count >= 2:
+        filler_penalty = 5
+    else:
+        filler_penalty = 0
+
+    # ------------------------
+    # 3️⃣ Speech Rate Calculation
+    # ------------------------
+    y, sr = librosa.load(file_path, sr=None)
+    duration = librosa.get_duration(y=y, sr=sr)
+
+    if duration > 0:
+        words_per_second = word_count / duration
+    else:
+        words_per_second = 0
+
+    # Ideal range: 2.0 - 3.0 WPS
+    if 2.0 <= words_per_second <= 3.0:
+        rate_score = 10
+    elif 1.5 <= words_per_second < 2.0 or 3.0 < words_per_second <= 3.5:
+        rate_score = 5
+    else:
+        rate_score = 0
+
+    # ------------------------
+    # Final Confidence Score
+    # ------------------------
+    confidence_score = max(base_score - filler_penalty + rate_score, 40)
 
     return {
         "transcript": transcript,
-        "confidence_score": confidence_score
+        "confidence_score": confidence_score,
+        "filler_count": filler_count,
+        "words_per_second": round(words_per_second, 2),
+        "duration_seconds": round(duration, 2)
     }
+
+# python -m uvicorn app:app --reload --port 8000
