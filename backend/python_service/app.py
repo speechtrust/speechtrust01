@@ -173,3 +173,4 @@ def analyze_audio(request: AudioRequest):
             "long_pause_count": long_pause_count
         }
     }
+# python -m uvicorn app:app --reload --port 8000
