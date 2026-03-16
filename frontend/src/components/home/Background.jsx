@@ -1,6 +1,8 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom';
 
 const Background = () => {
+  const navigate = useNavigate();
  return (
     <div className="relative h-screen  w-screen overflow-hidden bg-black text-white flex items-center">
 
@@ -57,7 +59,8 @@ const Background = () => {
           Analyze confidence through voice and behavioral patterns using AI.
         </p>
 
-        <button className="px-8 py-3 rounded-full bg-orange-600
+        <button onClick={() => navigate("/dashboard")} 
+        className="px-8 py-3 rounded-full bg-orange-600
                            hover:!bg-blue-600 transition shadow-lg">
           Start Evaluation →
         </button>
@@ -66,4 +69,4 @@ const Background = () => {
   );
 }
 
-export default Background
+export default Background;

@@ -22,6 +22,9 @@ const startAssessment = asyncHandler(async (req, res) => {
     if (!firstQuestion) {
         throw new ApiError(404, "No questions found");
     }
+    const totalQuestions = await Question.countDocuments();
+
+
 
     return res
         .status(200)
@@ -30,7 +33,8 @@ const startAssessment = asyncHandler(async (req, res) => {
                 200,
                 {
                     sessionId: session._id,
-                    question: firstQuestion
+                    question: firstQuestion,
+                    totalQuestions
                 },
                 "Assessment Started"
             )

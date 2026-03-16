@@ -85,7 +85,7 @@ export default function GlowingBackground({ children }) {
       className="relative h-screen w-screen overflow-hidden bg-black text-white flex items-center justify-center"
     >
       <div
-        className="absolute inset-0 z-1 pointer-events-none opacity-15"
+        className="absolute inset-0 z-1 pointer-events-none opacity-25"
         style={{
           backgroundImage: `
             linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
@@ -95,7 +95,7 @@ export default function GlowingBackground({ children }) {
         }}
       />
       {/* 🌑 Base */}
-      <div className="absolute inset-0 bg-black" />
+      <div className="absolute inset-0 bg-slate-800" />
 
       {/* 🔵 Glow */}
       <div
@@ -109,7 +109,7 @@ export default function GlowingBackground({ children }) {
 
       {/* 🔹 Dot Grid */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-25"
+        className="absolute inset-0 pointer-events-none opacity-75"
         style={{
           backgroundImage:
             "radial-gradient(circle, rgba(0,80,255,.5) 1.5px, transparent 1px)",
