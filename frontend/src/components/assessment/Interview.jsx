@@ -81,6 +81,8 @@ import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
+import MicBar from "./MicBar";
+import { Button } from "../ui/button";
 
 const Interview = () => {
 
@@ -251,14 +253,28 @@ const Interview = () => {
 
     // </div>
 
-    <>
-     <div className="h-screen w-screen overflow-hidden">
-        <TopBar />
-        <div className="h-full w-full flex justify-end">
-          <Sidebar />
+<>
+  <div className="h-screen w-screen overflow-hidden flex flex-col">
+    
+    <TopBar />
+
+    <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col">
+        <div className="bg-black/10 h-16 flex items-center justify-between p-4">
+          <h3 className="text-2xl font-semibold">Question no. 1</h3>
+          <Button>Submit</Button>
         </div>
-     </div>
-    </>
+        <div className="flex flex-1 flex-col p-4 justify-between overflow-hidden">
+          <h3 className="text-lg">fgvhbbbj</h3>
+          <div className="w-full flex justify-center">
+            <MicBar />
+          </div>
+        </div>
+      </div>
+      <Sidebar />
+    </div>
+  </div>
+</>
 
   );
 };

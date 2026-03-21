@@ -184,3 +184,19 @@ button {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1.4);
+  }
+}
+
+.animate-wave {
+  animation: wave 1s ease-in-out infinite;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+  will-change: transform;
+}
