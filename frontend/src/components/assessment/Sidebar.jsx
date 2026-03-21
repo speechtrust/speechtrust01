@@ -2,27 +2,45 @@ import React from 'react';
 import Timer from './Timer';
 import QuestionNavigator from './QuestionsBar';
 
-// Added props to receive data from Interview.jsx
-export default function Sidebar({ totalQuestions, currentIndex, answeredQuestions, setQuestionIndex }) {
+export default function Sidebar({ 
+  totalQuestions, 
+  currentIndex, 
+  answeredQuestions, 
+  phase, 
+  currentDuration, 
+  timerKey 
+}) {
   return (
-    <div className="h-full w-[300px] bg-white flex flex-col border-l border-gray-200">
+    <div className="h-full w-[320px] bg-slate-50 border-l border-slate-200 flex flex-col z-10 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
       
-      {/* Top Half: Question Navigator */}
-      <div className='h-1/2 overflow-hidden border-b border-gray-200'>
+      {/* Top Half: Question Grid */}
+      <div className='flex-1 overflow-hidden border-b border-slate-200 bg-white'>
         <QuestionNavigator 
           totalQuestions={totalQuestions} 
           currentIndex={currentIndex} 
           answeredQuestions={answeredQuestions}
-          onQuestionClick={(index) => setQuestionIndex(index)}
+          onQuestionClick={() => {}} // Disabled jumping for now to maintain strict flow
         />
       </div>
 
-      {/* Bottom Half: Timer */}
-      <div className='bg-pink-700 h-1/2 flex flex-col gap-4 justify-center items-center pb-8'>
-        <span className="text-white font-medium text-center px-4">
-          Read Time Remain / Answer Time Remain
-        </span>
-        <Timer />
+      {/* Bottom Half: Timer Status */}
+      <div className='h-70 bg-slate-50 flex flex-col justify-center items-center p-6'>
+        <div className="mb-4 text-center">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+            phase === 'reading' ? 'bg-amber-100 text-amber-700' :
+            phase === 'recording' ? 'bg-red-100 text-red-700 animate-pulse' :
+            'bg-blue-100 text-blue-700'
+          }`}>
+            {phase === 'reading' ? 'Reading Time' : 
+             phase === 'recording' ? 'Recording Answer' : 'Uploading...'}
+          </span>
+        </div>
+        
+        <Timer 
+          timerKey={timerKey} 
+          duration={currentDuration} 
+          isPlaying={phase !== 'uploading'} 
+        />
       </div>
       
     </div>
