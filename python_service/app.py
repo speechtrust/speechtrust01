@@ -6,18 +6,50 @@ import os
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+print("All imports done ✅")
+
 app = FastAPI()
 
-# Load models once (important for performance)
-model = whisper.load_model("base")
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+# Global models
+model = None
+embedding_model = None
 
 
+# ------------------------
+# Load models on startup
+# ------------------------
+@app.on_event("startup")
+def load_models():
+    global model, embedding_model
+
+    print("Loading Whisper model...")
+    model = whisper.load_model("base")
+    print("Whisper loaded ✅")
+
+    print("Loading embedding model...")
+    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    print("Embedding model loaded ✅")
+
+
+# ------------------------
+# Request Schema
+# ------------------------
 class AudioRequest(BaseModel):
     file_path: str
     question_text: str
 
 
+# ------------------------
+# Root Route
+# ------------------------
+@app.get("/")
+def home():
+    return {"message": "SpeechTrust Python service running 🚀"}
+
+
+# ------------------------
+# Analyze Endpoint
+# ------------------------
 @app.post("/analyze")
 def analyze_audio(request: AudioRequest):
     file_path = request.file_path
@@ -36,7 +68,7 @@ def analyze_audio(request: AudioRequest):
     word_count = len(words)
 
     # ------------------------
-    # 2️⃣ Base Score (Reduced Influence)
+    # 2️⃣ Base Score
     # ------------------------
     if word_count < 5:
         base_score = 40
@@ -152,7 +184,7 @@ def analyze_audio(request: AudioRequest):
     )
 
     # ------------------------
-    # 8️⃣ Return Response
+    # 8️⃣ Response
     # ------------------------
     return {
         "transcript": transcript,
@@ -173,4 +205,6 @@ def analyze_audio(request: AudioRequest):
             "long_pause_count": long_pause_count
         }
     }
-# python -m uvicorn app:app --reload --port 8000
+
+# venv\Scripts\activate
+# python -m uvicorn app:app --port 8000

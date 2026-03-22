@@ -63,7 +63,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Audio file is required");
     }
 
-    // Send audio path to Python
+    // Send audio to Python
     const pythonResponse = await axios.post(
         "http://127.0.0.1:8000/analyze",
         {
@@ -72,36 +72,27 @@ const submitAnswer = asyncHandler(async (req, res) => {
         }
     );
 
-    console.log(pythonResponse.data);
-
     const { transcript, confidence_score } = pythonResponse.data;
 
-    const questionScore = confidence_score;
-
-
-    // Create Attempt
+    // Save attempt
     await Attempt.create({
-    session: session._id,
-    question: currentQuestion._id,
-    transcript,
-    score: questionScore,
-    weight: currentQuestion.weight,
-    submittedEarly: submittedEarly || false
-});
-
+        session: session._id,
+        question: currentQuestion._id,
+        transcript,
+        score: confidence_score,
+        weight: currentQuestion.weight,
+        submittedEarly: submittedEarly || false
+    });
 
     // Move to next question
     session.currentQuestionIndex += 1;
     await session.save();
 
-    // Check if next question exists
-    const nextQuestion = await Question.findOne({
-        order: session.currentQuestionIndex + 1
-    });
+    // 🔥 NEW LOGIC (IMPORTANT)
+    const totalQuestions = await Question.countDocuments();
 
-
-    // If NO next question → finish assessment
-    if (!nextQuestion) {
+    // ✅ If last question answered → COMPLETE
+    if (session.currentQuestionIndex >= totalQuestions) {
 
         const attempts = await Attempt.find({ session: session._id });
 
@@ -122,7 +113,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
         session.totalScore = finalScore;
         await session.save();
 
-        // Calculate duration
         const durationMs = session.updatedAt - session.createdAt;
         const durationSeconds = Math.floor(durationMs / 1000);
 
@@ -133,6 +123,11 @@ const submitAnswer = asyncHandler(async (req, res) => {
         });
     }
 
+    // ✅ Otherwise send next question
+    const nextQuestion = await Question.findOne({
+        order: session.currentQuestionIndex + 1
+    });
+
     return res.status(200).json({
         completed: false,
         nextQuestion
@@ -140,8 +135,47 @@ const submitAnswer = asyncHandler(async (req, res) => {
 });
 
 
-const finishAssessment = asyncHandler((req, res) => {
+const finishAssessment = asyncHandler(async (req, res) => {
+    const { sessionId } = req.body;
 
+    const session = await Session.findById(sessionId);
+
+    if (!session || session.status !== "active") {
+        throw new ApiError(400, "Invalid or already completed session");
+    }
+
+    // Get all attempts so far
+    const attempts = await Attempt.find({ session: session._id });
+
+    if (attempts.length === 0) {
+        throw new ApiError(400, "No attempts found");
+    }
+
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+
+    attempts.forEach(a => {
+        totalWeightedScore += a.score * a.weight;
+        totalWeight += a.weight;
+    });
+
+    const finalScore =
+        totalWeight === 0
+            ? 0
+            : Math.round(totalWeightedScore / totalWeight);
+
+    session.status = "completed";
+    session.totalScore = finalScore;
+    await session.save();
+
+    const durationMs = session.updatedAt - session.createdAt;
+    const durationSeconds = Math.floor(durationMs / 1000);
+
+    return res.status(200).json({
+        completed: true,
+        finalScore,
+        duration: durationSeconds
+    });
 });
 
 export { startAssessment, submitAnswer, finishAssessment };

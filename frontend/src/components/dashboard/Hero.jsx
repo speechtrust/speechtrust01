@@ -3,9 +3,13 @@ import { Button } from '../ui/button'
 import Navbar from '../commons/Navbar'
 import api from '@/api/api'
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from "react-redux";
+import { startAssessment } from "@/redux/features/assessmentSlice";
 
 export default function Dashboard() {
+  
 const navigate = useNavigate();
+const dispatch = useDispatch();
 
 const handleStart = async () => {
   try {
@@ -13,16 +17,12 @@ const handleStart = async () => {
 
     const { sessionId, question, totalQuestions } = res.data.data;
 
-    navigate("/interview", {
-      state: {
-        sessionId,
-        question,
-        totalQuestions
-      }
-    });
+    dispatch(startAssessment({ sessionId, question, totalQuestions }));
+
+    navigate("/interview");
 
   } catch (err) {
-    console.error("Failed to start assessment", err);
+    console.error(err);
   }
 };
 
