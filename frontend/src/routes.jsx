@@ -3,6 +3,7 @@ import HomePage from "./components/home/HomePage";
 import AuthPage from "./components/auth/AuthPage";
 import Dashboard from "./components/dashboard/Hero";
 import Interview from "./components/assessment/Interview";
+import Result from "./components/assessment/result";
 
 const router = createBrowserRouter([
     {
@@ -27,6 +28,12 @@ const router = createBrowserRouter([
         path: "/interview",
         element: (
             <Interview />
+        )
+    },
+    {
+        path: "/result",
+        element: (
+            <Result />
         )
     }
 ])
