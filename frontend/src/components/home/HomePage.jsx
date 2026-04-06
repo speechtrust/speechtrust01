@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from './Navbar';
+import Navbar from '../commons/Navbar';
 import { ArrowRight, Activity, BrainCircuit, LineChart, Mic } from 'lucide-react';
 
 export default function HomePage() {
@@ -66,7 +66,7 @@ export default function HomePage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">Objective evaluation for modern professionals.</h2>
             <p className="text-lg text-slate-500">
-              Traditional confidence assessment is subjective and inconsistent. SpeechTrust uses advanced NLP and audio processing to analyze exactly how you speak, not just what you say.
+              Tradiotional confidence assessment is subjective and inconsistent. SpeechTrust uses advanced NLP and audio processing to analyze exactly how you speak, not just what you say.
             </p>
           </div>
 
