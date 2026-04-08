@@ -71,17 +71,19 @@ const submitAnswer = asyncHandler(async (req, res) => {
         }
     );
 
-    const { transcript, confidence_score } = pythonResponse.data;
+    const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
 
     // Save attempt
-    await Attempt.create({
-        session: session._id,
-        question: currentQuestion._id,
-        transcript,
-        score: confidence_score,
-        weight: currentQuestion.weight,
-        submittedEarly: submittedEarly || false
-    });
+await Attempt.create({
+  session: session._id,
+  question: currentQuestion._id,
+  transcript,
+  score: confidence_score,
+  weight: currentQuestion.weight,
+  submittedEarly: submittedEarly || false,
+  breakdown: pythonResponse.data.score_breakdown,
+  metrics: pythonResponse.data.metrics
+});
 
     // Move to next question
     session.currentQuestionIndex += 1;
@@ -90,37 +92,60 @@ const submitAnswer = asyncHandler(async (req, res) => {
     // 🔥 NEW LOGIC (IMPORTANT)
     const totalQuestions = await Question.countDocuments();
 
-    // ✅ If last question answered → COMPLETE
-    if (session.currentQuestionIndex >= totalQuestions) {
+if (session.currentQuestionIndex >= totalQuestions) {
 
-        const attempts = await Attempt.find({ session: session._id });
+    // 🔥 GET ATTEMPTS FIRST
+    const attempts = await Attempt.find({ session: session._id });
 
-        let totalWeightedScore = 0;
-        let totalWeight = 0;
+    let totalFillers = 0;
+    let avgWPS = 0;
+    let avgRelevance = 0;
+    let totalPause = 0;
 
-        attempts.forEach(a => {
-            totalWeightedScore += a.score * a.weight;
-            totalWeight += a.weight;
-        });
+    attempts.forEach(a => {
+        totalFillers += a.metrics?.filler_count || 0;
+        avgWPS += a.metrics?.words_per_second || 0;
+        avgRelevance += a.metrics?.relevance_similarity || 0;
+        totalPause += a.metrics?.long_pause_count || 0;
+    });
 
-        const finalScore =
-            totalWeight === 0
-                ? 0
-                : Math.round(totalWeightedScore / totalWeight);
+    const count = attempts.length || 1;
 
-        session.status = "completed";
-        session.totalScore = finalScore;
-        await session.save();
+    const analytics = {
+        filler_count: totalFillers,
+        words_per_second: (avgWPS / count).toFixed(2),
+        relevance: (avgRelevance / count).toFixed(2),
+        pause_count: totalPause
+    };
 
-        const durationMs = session.updatedAt - session.createdAt;
-        const durationSeconds = Math.floor(durationMs / 1000);
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
 
-        return res.status(200).json({
-            completed: true,
-            finalScore,
-            duration: durationSeconds
-        });
-    }
+    attempts.forEach(a => {
+        totalWeightedScore += a.score * a.weight;
+        totalWeight += a.weight;
+    });
+
+    const finalScore =
+        totalWeight === 0
+            ? 0
+            : Math.round(totalWeightedScore / totalWeight);
+
+    session.status = "completed";
+    session.totalScore = finalScore;
+    await session.save();
+
+    const durationMs = session.updatedAt - session.createdAt;
+    const durationSeconds = Math.floor(durationMs / 1000);
+
+    return res.status(200).json({
+        completed: true,
+        finalScore,
+        duration: durationSeconds,
+        analytics,
+        attempts
+    });
+}
 
     // ✅ Otherwise send next question
     const nextQuestion = await Question.findOne({
@@ -177,4 +202,36 @@ const finishAssessment = asyncHandler(async (req, res) => {
     });
 });
 
-export { startAssessment, submitAnswer, finishAssessment };
+const getHistory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const sessions = await Session.find({ user: userId, status: "completed" })
+    .sort({ createdAt: -1 });
+
+  return res.status(200).json(
+    new ApiResponse(200, sessions, "History fetched")
+  );
+});
+
+const getSessionDetails = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+
+  const session = await Session.findById(sessionId);
+
+  if (!session) {
+    throw new ApiError(404, "Session not found");
+  }
+
+  const attempts = await Attempt.find({ session: sessionId });
+
+  const durationMs = session.updatedAt - session.createdAt;
+  const durationSeconds = Math.floor(durationMs / 1000);
+
+  return res.status(200).json({
+    finalScore: session.totalScore,
+    duration: durationSeconds,
+    attempts
+  });
+});
+
+export { startAssessment, submitAnswer, finishAssessment, getHistory, getSessionDetails };

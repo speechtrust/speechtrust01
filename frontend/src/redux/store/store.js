@@ -1,13 +1,17 @@
 import { configureStore } from "@reduxjs/toolkit";
 import assessmentReducer from "../features/assessmentSlice";
+import userReducer from "../features/userSlice";
 
-const savedState = JSON.parse(localStorage.getItem("assessment"));
+const savedAssessment = JSON.parse(localStorage.getItem("assessment"));
+const savedUser = JSON.parse(localStorage.getItem("user"));
 
 export const store = configureStore({
   reducer: {
     assessment: assessmentReducer,
+    user: userReducer,
   },
   preloadedState: {
-    assessment: savedState || undefined,
+    assessment: savedAssessment || undefined,
+    user: savedUser || undefined,
   },
 });

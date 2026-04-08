@@ -13,6 +13,8 @@ const attemptSchema = new mongoose.Schema({
   score: Number,
   weight: Number,
   submittedEarly: Boolean,
+  breakdown: Object,
+  metrics: Object,
   createdAt: {
     type: Date,
     default: Date.now

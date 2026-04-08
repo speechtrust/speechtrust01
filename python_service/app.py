@@ -207,4 +207,4 @@ def analyze_audio(request: AudioRequest):
     }
 
 # venv\Scripts\activate
-# python -m uvicorn app:app --port 8000
+# python -m uvicorn app:app --port 8000 
