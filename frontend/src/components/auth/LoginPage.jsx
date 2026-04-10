@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import api from "@/api/api";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import AuthLayout from "./AuthLayout"; // Import the wrapper
+import AuthLayout from "./AuthLayout";
+import { useDispatch } from "react-redux";
+import { loginStart, loginSuccess, loginFailure } from "@/redux/features/userSlice";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
@@ -20,32 +22,39 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent form submission refresh
-    const result = loginSchema.safeParse({ email, password });
+const dispatch = useDispatch();
 
-    if (!result.success) {
-      toast.warning(result.error.errors[0].message);
-      return;
-    }
+const handleLogin = async (e) => {
+  e.preventDefault();
 
-    setIsLoading(true);
+  const result = loginSchema.safeParse({ email, password });
 
-    try {
-      await api.post("/users/login", result.data);
-      navigate("/dashboard");
-    } catch (error) {
-      if (error.response) {
-        toast.error(error.response.data?.message || "Invalid credentials");
-      } else if (error.request) {
-        toast.error("Server not responding. Try again later.");
-      } else {
-        toast.error("Something went wrong.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (!result.success) {
+    toast.warning(result.error.errors[0].message);
+    return;
+  }
+
+  dispatch(loginStart());
+  setIsLoading(true);
+
+  try {
+    const res = await api.post("/users/login", result.data);
+
+    const { user, accessToken } = res.data.data;
+
+    dispatch(loginSuccess({ user, accessToken }));
+
+    toast.success("Login successful");
+    navigate("/dashboard");
+
+  } catch (error) {
+    dispatch(loginFailure());
+
+    toast.error(error.response?.data?.message || "Login failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <AuthLayout>

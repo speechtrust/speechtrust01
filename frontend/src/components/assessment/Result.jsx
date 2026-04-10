@@ -33,24 +33,55 @@ const Result = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-const {
-  finalScore = 0,
-  duration = 0,
-  attempts = []
-} = location.state || {};
+  // Fix 1: Get the ID from the URL (which matches Hero.jsx navigation)
+  const { id } = useParams();
 
-  if (!location.state && process.env.NODE_ENV === "production") {
+  // Fix 2: Use state to hold the data so we can fetch it if needed
+  const [resultData, setResultData] = useState(location.state || null);
+  const [isLoading, setIsLoading] = useState(!location.state);
+
+  // Fix 3: Fetch the data from the backend if accessed from the Dashboard History
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      if (!location.state && id) {
+        try {
+          const res = await api.get(`/assessment/result/${id}`);
+          setResultData(res.data.data);
+        } catch (err) {
+          console.error("Failed to fetch session details", err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchSessionData();
+  }, [id, location.state]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500 font-medium animate-pulse">
+          Loading analysis...
+        </p>
+      </div>
+    );
+  }
+
+  if (!resultData) {
     return (
       <div className="h-screen w-screen bg-slate-50 flex items-center justify-center flex-col gap-4">
         <p className="text-slate-500 font-medium">
-          Session expired or invalid.
+          Session expired or not found.
         </p>
-        <Button onClick={() => navigate("/")} variant="outline">
+        <Button onClick={() => navigate("/dashboard")} variant="outline">
           Return to Dashboard
         </Button>
       </div>
     );
   }
+
+  // Extract the data from our new state variable
+  const { finalScore = 0, duration = 0, attempts = [] } = resultData;
 
   // --- Helper Functions for Dynamic UI ---
   const getScoreDetails = (score) => {
@@ -92,67 +123,88 @@ const {
   };
 
   const avg = (key) => {
-  if (!attempts.length) return 0;
-  return Math.round(
-    attempts.reduce((sum, a) => sum + (a.metrics?.[key] || 0), 0) / attempts.length
-  );
-};
+    if (!attempts.length) return 0;
+    return Math.round(
+      attempts.reduce((sum, a) => sum + (a.metrics?.[key] || 0), 0) /
+        attempts.length,
+    );
+  };
 
   const analytics = {
-  filler_count: avg("filler_count"),
-  words_per_second: avg("words_per_second"),
-  relevance: avg("relevance_similarity"),
-  pause_count: avg("long_pause_count"),
-};
+    filler_count: avg("filler_count"),
+    words_per_second: avg("words_per_second"),
+    relevance: avg("relevance_similarity"),
+    pause_count: avg("long_pause_count"),
+  };
 
   const generateFeedback = (analytics, score) => {
-  if (!analytics) return "No analysis available.";
+    if (!analytics) return "No analysis available.";
 
-  let feedback = [];
+    let feedback = [];
 
-  // 🎯 Filler words
-  if (analytics.filler_count > 8) {
-    feedback.push("You used a high number of filler words. Try to pause instead of using fillers like 'um' or 'uh'.");
-  } else if (analytics.filler_count > 3) {
-    feedback.push("You used some filler words. Reducing them will make your speech more polished.");
-  }
+    // 🎯 Filler words
+    if (analytics.filler_count > 8) {
+      feedback.push(
+        "You used a high number of filler words. Try to pause instead of using fillers like 'um' or 'uh'.",
+      );
+    } else if (analytics.filler_count > 3) {
+      feedback.push(
+        "You used some filler words. Reducing them will make your speech more polished.",
+      );
+    }
 
-  // ⚡ Speaking speed
-  if (analytics.words_per_second < 1.5) {
-    feedback.push("Your speaking pace was a bit slow. Try to speak more naturally and confidently.");
-  } else if (analytics.words_per_second > 3.5) {
-    feedback.push("You were speaking too fast. Slowing down will improve clarity.");
-  } else {
-    feedback.push("Your speaking pace was well balanced.");
-  }
+    // ⚡ Speaking speed
+    if (analytics.words_per_second < 1.5) {
+      feedback.push(
+        "Your speaking pace was a bit slow. Try to speak more naturally and confidently.",
+      );
+    } else if (analytics.words_per_second > 3.5) {
+      feedback.push(
+        "You were speaking too fast. Slowing down will improve clarity.",
+      );
+    } else {
+      feedback.push("Your speaking pace was well balanced.");
+    }
 
-  // 🧠 Relevance
-  if (analytics.relevance < 0.2) {
-    feedback.push("Your answers were not very relevant to the questions. Focus on addressing the question directly.");
-  } else if (analytics.relevance < 0.4) {
-    feedback.push("Your answers were somewhat relevant. Try to stay more on topic.");
-  } else {
-    feedback.push("Your answers were relevant and well-aligned with the questions.");
-  }
+    // 🧠 Relevance
+    if (analytics.relevance < 0.2) {
+      feedback.push(
+        "Your answers were not very relevant to the questions. Focus on addressing the question directly.",
+      );
+    } else if (analytics.relevance < 0.4) {
+      feedback.push(
+        "Your answers were somewhat relevant. Try to stay more on topic.",
+      );
+    } else {
+      feedback.push(
+        "Your answers were relevant and well-aligned with the questions.",
+      );
+    }
 
-  // ⏱ Pauses
-  if (analytics.pause_count > 5) {
-    feedback.push("You had frequent long pauses. Try to maintain a smoother flow while speaking.");
-  } else if (analytics.pause_count > 2) {
-    feedback.push("There were some noticeable pauses. Improving fluency will help.");
-  }
+    // ⏱ Pauses
+    if (analytics.pause_count > 5) {
+      feedback.push(
+        "You had frequent long pauses. Try to maintain a smoother flow while speaking.",
+      );
+    } else if (analytics.pause_count > 2) {
+      feedback.push(
+        "There were some noticeable pauses. Improving fluency will help.",
+      );
+    }
 
-  // 🏁 Overall score
-  if (score > 80) {
-    feedback.push("Overall, excellent performance. Keep it up!");
-  } else if (score > 60) {
-    feedback.push("Good performance with room for improvement.");
-  } else {
-    feedback.push("You need more practice to improve confidence and clarity.");
-  }
+    // 🏁 Overall score
+    if (score > 80) {
+      feedback.push("Overall, excellent performance. Keep it up!");
+    } else if (score > 60) {
+      feedback.push("Good performance with room for improvement.");
+    } else {
+      feedback.push(
+        "You need more practice to improve confidence and clarity.",
+      );
+    }
 
-  return feedback.join(" ");
-};
+    return feedback.join(" ");
+  };
 
   const details = getScoreDetails(finalScore);
   const aiFeedback = generateFeedback(analytics, finalScore);
@@ -164,16 +216,31 @@ const {
     return `${m}m ${s}s`;
   };
 
-const clamp = (val) => Math.max(0, Math.min(100, val));
+  const clamp = (val) => Math.max(0, Math.min(100, val));
 
-const performanceData = [
-  { subject: "Fluency", A: clamp(avg("words_per_second") * 20), fullMark: 100 },
-  { subject: "Pauses", A: clamp(100 - avg("silence_ratio") * 100), fullMark: 100 },
-  { subject: "Relevance", A: clamp(avg("relevance_similarity") * 100), fullMark: 100 },
-  { subject: "Clarity", A: clamp(100 - avg("filler_count") * 10), fullMark: 100 },
-  { subject: "Confidence", A: clamp(finalScore), fullMark: 100 },
-];
-  
+  const performanceData = [
+    {
+      subject: "Fluency",
+      A: clamp(avg("words_per_second") * 20),
+      fullMark: 100,
+    },
+    {
+      subject: "Pauses",
+      A: clamp(100 - avg("silence_ratio") * 100),
+      fullMark: 100,
+    },
+    {
+      subject: "Relevance",
+      A: clamp(avg("relevance_similarity") * 100),
+      fullMark: 100,
+    },
+    {
+      subject: "Clarity",
+      A: clamp(100 - avg("filler_count") * 10),
+      fullMark: 100,
+    },
+    { subject: "Confidence", A: clamp(finalScore), fullMark: 100 },
+  ];
 
   return (
     <div className="min-h-screen w-screen bg-slate-50 p-6 md:p-12 font-sans flex flex-col items-center">
@@ -256,16 +323,18 @@ const performanceData = [
             </CardContent>
           </Card>
           <Card className="shadow-sm border-slate-200">
-  <CardHeader>
-    <CardTitle>Speech Metrics</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-2 text-sm text-slate-700">
-    <p>Filler Words: {avg("filler_count")}</p>
-    <p>Speech Rate: {avg("words_per_second")} words/sec</p>
-    <p>Silence Ratio: {(avg("silence_ratio") * 100).toFixed(1)}%</p>
-    <p>Relevance: {(avg("relevance_similarity") * 100).toFixed(1)}%</p>
-  </CardContent>
-</Card>
+            <CardHeader>
+              <CardTitle>Speech Metrics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-slate-700">
+              <p>Filler Words: {avg("filler_count")}</p>
+              <p>Speech Rate: {avg("words_per_second")} words/sec</p>
+              <p>Silence Ratio: {(avg("silence_ratio") * 100).toFixed(1)}%</p>
+              <p>
+                Relevance: {(avg("relevance_similarity") * 100).toFixed(1)}%
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* --- RIGHT COLUMN: Chart & Detailed Feedback --- */}

@@ -1,13 +1,23 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mic } from 'lucide-react';
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/redux/features/userSlice";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
+
+  const { isAuthenticated, user } = useSelector((state) => state.user);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login"); 
+  };
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300">
+    <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
         
         {/* Logo */}
@@ -15,24 +25,38 @@ const Navbar = () => {
           <div className="w-8 h-8 bg-[#162456] rounded-md flex items-center justify-center group-hover:bg-[#243882] transition-colors">
             <Mic size={18} className="text-white" />
           </div>
-          <span className="text-xl font-bold text-slate-800 tracking-tight">SpeechTrust</span>
+          <span className="text-xl font-bold text-slate-800 tracking-tight">
+            SpeechTrust
+          </span>
         </Link>
 
-        {/* Desktop Links */}
-        {/* <div className="hidden md:flex items-center gap-8 font-medium text-slate-600">
-          <Link to="/" className={`hover:text-[#243882] transition-colors ${location.pathname === '/' ? 'text-[#162456] font-semibold' : ''}`}>Home</Link>
-          <Link to="/login" className={`hover:text-[#243882] transition-colors ${location.pathname === '/login' ? 'text-[#162456] font-semibold' : ''}`}>Login</Link>
-          <Link to="/signup" className={`hover:text-[#243882] transition-colors ${location.pathname === '/signup' ? 'text-[#162456] font-semibold' : ''}`}>Signup</Link>
-        </div> */}
+        {/* Right Side */}
+        <div className="flex items-center gap-4">
 
-        {/* Action Button */}
-        <div>
-          <button 
-            onClick={() => navigate('/login')}
-            className="px-5 py-2 text-sm font-semibold rounded-lg bg-[#162456] text-white hover:bg-[#243882] shadow-md transition-all"
-          >
-            Login
-          </button>
+          {/* 👤 Show user name (optional but nice) */}
+          {isAuthenticated && (
+            <span className="hidden md:block text-sm text-slate-600 font-medium">
+              Hi, {user?.firstname || "User"}
+            </span>
+          )}
+
+          {/* 🔐 Conditional Button */}
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="px-5 py-2 text-sm font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 shadow-md transition-all"
+            >
+              Logout
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')}
+              className="px-5 py-2 text-sm font-semibold rounded-lg bg-[#162456] text-white hover:bg-[#243882] shadow-md transition-all"
+            >
+              Login
+            </button>
+          )}
+
         </div>
 
       </div>

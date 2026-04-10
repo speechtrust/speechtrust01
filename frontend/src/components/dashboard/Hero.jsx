@@ -1,46 +1,5 @@
-// import React from 'react'
-// import { Button } from '../ui/button'
-// import Navbar from '../commons/Navbar'
-// import api from '@/api/api'
-// import { useNavigate } from 'react-router-dom';
-// import { useDispatch } from "react-redux";
-// import { startAssessment } from "@/redux/features/assessmentSlice";
-
-// export default function Dashboard() {
-  
-// const navigate = useNavigate();
-// const dispatch = useDispatch();
-
-// const handleStart = async () => {
-//   try {
-//     const res = await api.post("/assessment/start");
-
-//     const { sessionId, question, totalQuestions } = res.data.data;
-
-//     dispatch(startAssessment({ sessionId, question, totalQuestions }));
-
-//     navigate("/interview");
-
-//   } catch (err) {
-//     console.error(err);
-//   }
-// };
-
-//   return (
-//     <>
-//     <Navbar />
-//     <div className='h-screen w-screen flex justify-center items-center'>
-//       <Button onClick={handleStart}
-//       className='p-4 h-10'>Start Assessment</Button>
-//     </div>
-//     </>
-//   )
-// }
-
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
 import Navbar from "../commons/Navbar";
 import api from "@/api/api";
 import { startAssessment } from "@/redux/features/assessmentSlice";
@@ -48,31 +7,39 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { LayoutDashboard, History, PlayCircle, Clock, CheckCircle2, TrendingUp, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { useSelector, useDispatch } from "react-redux";
+import { setResults } from "@/redux/features/resultSlice";
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("assessments");
+ const [activeTab, setActiveTab] = useState("assessments");
   const [isStarting, setIsStarting] = useState(false);
-  const navigate = useNavigate();
+  
+  // Fix 1: Use local state for history to prevent infinite loading bugs
+  const [historyData, setHistoryData] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  
   const dispatch = useDispatch();
-  const [history, setHistory] = useState([]);
-const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-  const fetchHistory = async () => {
-    try {
-      const res = await api.get("/assessment/history");
-      setHistory(res.data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchHistory = async () => {
+      try {
+        setIsLoadingHistory(true);
+        const res = await api.get("/assessment/history");
+        
+        // Ensure we are grabbing the array correctly from your ApiResponse
+        const fetchedHistory = res.data.data || res.data;
+        setHistoryData(fetchedHistory);
+      } catch (err) {
+        console.error("Failed to fetch history:", err);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
 
-  fetchHistory();
-}, []);
+    fetchHistory();
+  }, []);
 
-  // --- API LOGIC (Preserved from your code) ---
   const handleStart = async () => {
     setIsStarting(true);
     try {
@@ -94,63 +61,61 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  function HistoryView({ history, loading }) {
+function HistoryView({ history, loading }) {
+    const navigate = useNavigate();
 
-  const navigate = useNavigate();
+    // Fix 2: Check the explicit loading boolean, not the array length
+    if (loading) {
+      return <p className="text-center py-10 text-slate-500 font-medium animate-pulse">Loading history...</p>;
+    }
 
-  if (loading) {
-    return <p className="text-center py-10 text-slate-500">Loading...</p>;
-  }
+    if (!history || history.length === 0) {
+      return (
+        <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-700">No history yet</h3>
+          <p className="text-slate-500 mt-1">Take your first interview to see your results here!</p>
+        </div>
+      );
+    }
 
-  if (!history.length) {
     return (
-      <div className="text-center py-20 bg-white rounded-xl border">
-        <h3>No history yet</h3>
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr className="text-left text-slate-600">
+              <th className="px-6 py-4">Assessment</th>
+              <th className="px-6 py-4">Date</th>
+              <th className="px-6 py-4">Score</th>
+              <th className="px-6 py-4">Action</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {history.map((item) => (
+              <tr key={item._id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4 font-medium text-slate-800">Interview Practice</td>
+                <td className="px-6 py-4 text-slate-600">
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4">
+                  <span className="font-bold text-slate-800">{item.totalScore}</span> / 100
+                </td>
+                <td className="px-6 py-4">
+                  {/* Fix 3: This navigate relies on the URL param we set up in Result.jsx! */}
+                  <button
+                    onClick={() => navigate(`/result/${item._id}`)}
+                    className="text-indigo-600 font-semibold hover:text-indigo-800 transition-colors"
+                  >
+                    View Details &rarr;
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
-
-  return (
-    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b">
-          <tr>
-            <th className="px-6 py-4">Assessment</th>
-            <th className="px-6 py-4">Date</th>
-            <th className="px-6 py-4">Score</th>
-            <th className="px-6 py-4">Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {history.map((item) => (
-            <tr key={item._id} className="hover:bg-slate-50">
-              <td className="px-6 py-4">Interview Practice</td>
-
-              <td className="px-6 py-4">
-                {new Date(item.createdAt).toLocaleDateString()}
-              </td>
-
-              <td className="px-6 py-4 font-bold">
-                {item.totalScore}
-              </td>
-
-              <td className="px-6 py-4">
-                <button
-                  onClick={() => navigate(`/result/${item._id}`)}
-                  className="text-indigo-600 font-semibold"
-                >
-                  View
-                </button>
-              </td>
-
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
@@ -229,7 +194,6 @@ const [loading, setLoading] = useState(true);
                 </CardFooter>
               </Card>
 
-              {/* Placeholder for future assessments */}
               <Card className="shadow-sm border-slate-200 bg-slate-50/50 border-dashed flex flex-col items-center justify-center text-center p-6 opacity-70">
                 <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle2 className="text-slate-400" size={24} />
@@ -241,8 +205,9 @@ const [loading, setLoading] = useState(true);
             </div>
           )}
 
-          {/* 2. HISTORY TAB */}
-          {activeTab === "history" && <HistoryView history={history} loading={loading} />}
+{activeTab === "history" && (
+            <HistoryView history={historyData} loading={isLoadingHistory} />
+          )}
 
         </div>
       </main>

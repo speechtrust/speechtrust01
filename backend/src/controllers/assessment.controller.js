@@ -74,16 +74,16 @@ const submitAnswer = asyncHandler(async (req, res) => {
     const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
 
     // Save attempt
-await Attempt.create({
-  session: session._id,
-  question: currentQuestion._id,
-  transcript,
-  score: confidence_score,
-  weight: currentQuestion.weight,
-  submittedEarly: submittedEarly || false,
-  breakdown: pythonResponse.data.score_breakdown,
-  metrics: pythonResponse.data.metrics
-});
+    await Attempt.create({
+        session: session._id,
+        question: currentQuestion._id,
+        transcript,
+        score: confidence_score,
+        weight: currentQuestion.weight,
+        submittedEarly: submittedEarly || false,
+        breakdown: pythonResponse.data.score_breakdown,
+        metrics: pythonResponse.data.metrics
+    });
 
     // Move to next question
     session.currentQuestionIndex += 1;
@@ -92,60 +92,60 @@ await Attempt.create({
     // 🔥 NEW LOGIC (IMPORTANT)
     const totalQuestions = await Question.countDocuments();
 
-if (session.currentQuestionIndex >= totalQuestions) {
+    if (session.currentQuestionIndex >= totalQuestions) {
 
-    // 🔥 GET ATTEMPTS FIRST
-    const attempts = await Attempt.find({ session: session._id });
+        // 🔥 GET ATTEMPTS FIRST
+        const attempts = await Attempt.find({ session: session._id });
 
-    let totalFillers = 0;
-    let avgWPS = 0;
-    let avgRelevance = 0;
-    let totalPause = 0;
+        let totalFillers = 0;
+        let avgWPS = 0;
+        let avgRelevance = 0;
+        let totalPause = 0;
 
-    attempts.forEach(a => {
-        totalFillers += a.metrics?.filler_count || 0;
-        avgWPS += a.metrics?.words_per_second || 0;
-        avgRelevance += a.metrics?.relevance_similarity || 0;
-        totalPause += a.metrics?.long_pause_count || 0;
-    });
+        attempts.forEach(a => {
+            totalFillers += a.metrics?.filler_count || 0;
+            avgWPS += a.metrics?.words_per_second || 0;
+            avgRelevance += a.metrics?.relevance_similarity || 0;
+            totalPause += a.metrics?.long_pause_count || 0;
+        });
 
-    const count = attempts.length || 1;
+        const count = attempts.length || 1;
 
-    const analytics = {
-        filler_count: totalFillers,
-        words_per_second: (avgWPS / count).toFixed(2),
-        relevance: (avgRelevance / count).toFixed(2),
-        pause_count: totalPause
-    };
+        const analytics = {
+            filler_count: totalFillers,
+            words_per_second: (avgWPS / count).toFixed(2),
+            relevance: (avgRelevance / count).toFixed(2),
+            pause_count: totalPause
+        };
 
-    let totalWeightedScore = 0;
-    let totalWeight = 0;
+        let totalWeightedScore = 0;
+        let totalWeight = 0;
 
-    attempts.forEach(a => {
-        totalWeightedScore += a.score * a.weight;
-        totalWeight += a.weight;
-    });
+        attempts.forEach(a => {
+            totalWeightedScore += a.score * a.weight;
+            totalWeight += a.weight;
+        });
 
-    const finalScore =
-        totalWeight === 0
-            ? 0
-            : Math.round(totalWeightedScore / totalWeight);
+        const finalScore =
+            totalWeight === 0
+                ? 0
+                : Math.round(totalWeightedScore / totalWeight);
 
-    session.status = "completed";
-    session.totalScore = finalScore;
-    await session.save();
+        session.status = "completed";
+        session.totalScore = finalScore;
+        await session.save();
 
-    const durationMs = session.updatedAt - session.createdAt;
-    const durationSeconds = Math.floor(durationMs / 1000);
+        const durationMs = session.updatedAt - session.createdAt;
+        const durationSeconds = Math.floor(durationMs / 1000);
 
-    return res.status(200).json({
-        completed: true,
-        finalScore,
-        duration: durationSeconds,
-        analytics,
-        attempts
-    });
-}
+        return res.status(200).json({
+            completed: true,
+            finalScore,
+            duration: durationSeconds,
+            analytics,
+            attempts
+        });
+    }
 
     // ✅ Otherwise send next question
     const nextQuestion = await Question.findOne({
@@ -168,7 +168,7 @@ const finishAssessment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid or already completed session");
     }
 
-    // Get all attempts so far
+
     const attempts = await Attempt.find({ session: session._id });
 
     if (attempts.length === 0) {
@@ -203,35 +203,41 @@ const finishAssessment = asyncHandler(async (req, res) => {
 });
 
 const getHistory = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+    const userId = req.user._id;
 
-  const sessions = await Session.find({ user: userId, status: "completed" })
-    .sort({ createdAt: -1 });
+    const sessions = await Session.find({ user: userId, status: "completed" })
+        .sort({ createdAt: -1 });
 
-  return res.status(200).json(
-    new ApiResponse(200, sessions, "History fetched")
-  );
+    return res.status(200).json(
+        new ApiResponse(200, sessions, "History fetched")
+    );
 });
 
 const getSessionDetails = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
+    const { sessionId } = req.params;
 
-  const session = await Session.findById(sessionId);
+    const session = await Session.findById(sessionId);
 
-  if (!session) {
-    throw new ApiError(404, "Session not found");
-  }
+    if (!session) {
+        throw new ApiError(404, "Session not found");
+    }
 
-  const attempts = await Attempt.find({ session: sessionId });
+    const attempts = await Attempt.find({ session: sessionId });
 
-  const durationMs = session.updatedAt - session.createdAt;
-  const durationSeconds = Math.floor(durationMs / 1000);
+    const durationMs = session.updatedAt - session.createdAt;
+    const durationSeconds = Math.floor(durationMs / 1000);
 
-  return res.status(200).json({
-    finalScore: session.totalScore,
-    duration: durationSeconds,
-    attempts
-  });
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                finalScore: session.totalScore,
+                duration: durationSeconds,
+                attempts
+            },
+            "Session details fetched"
+        )
+    );
 });
 
 export { startAssessment, submitAnswer, finishAssessment, getHistory, getSessionDetails };

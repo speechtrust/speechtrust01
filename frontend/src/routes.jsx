@@ -5,6 +5,7 @@ import Interview from "./components/assessment/Interview";
 import Result from "./components/assessment/result";
 import LoginPage from "./components/auth/LoginPage";
 import SignupPage from "./components/auth/SignupPage";
+import ProtectedRoute from "./components/commons/ProtectedRoute";
 
 const router = createBrowserRouter([
     {
@@ -28,19 +29,25 @@ const router = createBrowserRouter([
     {
         path: "/dashboard",
         element: (
+            <ProtectedRoute>
             <Dashboard />
+            </ProtectedRoute>
         )
     },
     {
         path: "/interview",
         element: (
-            <Interview />
+            <ProtectedRoute>
+                <Interview />
+            </ProtectedRoute>
         )
     },
     {
-        path: "/result",
+        path: "/result/:id",    
         element: (
-            <Result />
+            <ProtectedRoute>
+                <Result />
+            </ProtectedRoute>
         )
     }
 ])
