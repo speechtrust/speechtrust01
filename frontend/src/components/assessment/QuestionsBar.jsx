@@ -55,8 +55,7 @@ export default function QuestionsBar({
             </div>
           );
         })}
-      </div>
-      
+      </div> 
     </div>
   );
 }

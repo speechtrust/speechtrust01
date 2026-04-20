@@ -17,11 +17,9 @@ const handleFinish = async () => {
       sessionId,
     });
 
-    console.log("Finished early:", res.data);
-
     dispatch(resetAssessment());
 
-    navigate("/result", {
+    navigate(`/result/${sessionId}`, {
       state: res.data,
     });
 

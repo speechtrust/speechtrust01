@@ -130,12 +130,12 @@ const Result = () => {
     );
   };
 
-  const analytics = {
-    filler_count: avg("filler_count"),
-    words_per_second: avg("words_per_second"),
-    relevance: avg("relevance_similarity"),
-    pause_count: avg("long_pause_count"),
-  };
+const analytics = resultData.analytics || {
+  filler_count: avg("filler_count"),
+  words_per_second: avg("words_per_second"),
+  relevance: avg("relevance_similarity"),
+  pause_count: avg("long_pause_count"),
+};
 
   const generateFeedback = (analytics, score) => {
     if (!analytics) return "No analysis available.";
@@ -327,11 +327,11 @@ const Result = () => {
               <CardTitle>Speech Metrics</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-700">
-              <p>Filler Words: {avg("filler_count")}</p>
-              <p>Speech Rate: {avg("words_per_second")} words/sec</p>
-              <p>Silence Ratio: {(avg("silence_ratio") * 100).toFixed(1)}%</p>
+              <p>Filler Words: {analytics.filler_count}</p>
+<p>Speech Rate: {analytics.words_per_second} words/sec</p>
+              <p>Pauses: {analytics.pause_count}</p>
               <p>
-                Relevance: {(avg("relevance_similarity") * 100).toFixed(1)}%
+                <p>Relevance: {(analytics.relevance * 100).toFixed(1)}%</p>
               </p>
             </CardContent>
           </Card>

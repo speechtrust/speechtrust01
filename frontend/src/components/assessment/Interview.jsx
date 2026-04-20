@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import MicBar from "./MicBar";
 import { Button } from "../ui/button";
 import { useSelector, useDispatch } from "react-redux";
-import { setNextQuestion, setPhase } from "@/redux/features/assessmentSlice";
+import {
+  setNextQuestion,
+  setPhase,
+  resetAssessment,
+} from "@/redux/features/assessmentSlice";
 import api from "@/api/api";
-import { resetAssessment } from "@/redux/features/assessmentSlice";
 import { useNavigate } from "react-router-dom";
-import { useRef } from "react";
 
 const Interview = () => {
   const mediaRecorderRef = useRef(null);
@@ -24,11 +26,9 @@ const Interview = () => {
   const question = currentQuestion;
   const currentIndex = questionIndex - 1;
 
-  // Local UI states
   const [micActive, setMicActive] = useState(false);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
 
-  // Safety check
   if (!question) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -37,13 +37,12 @@ const Interview = () => {
     );
   }
 
-  // Timer values
   const currentDuration =
     phase === "reading" ? question.readTime : question.answerTime;
 
   const timerKey = `timer-${currentIndex}-${phase}`;
 
-  // Reading Timer
+  // 📖 Reading Phase
   useEffect(() => {
     if (phase !== "reading") return;
 
@@ -56,7 +55,7 @@ const Interview = () => {
     return () => clearTimeout(timer);
   }, [phase, question.readTime, dispatch]);
 
-  // Answer Timer
+  // 🎤 Recording Phase
   useEffect(() => {
     if (phase !== "recording") return;
 
@@ -67,6 +66,7 @@ const Interview = () => {
     return () => clearTimeout(timer);
   }, [phase, question.answerTime]);
 
+  // Cleanup mic
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -75,48 +75,48 @@ const Interview = () => {
     };
   }, []);
 
-  // Submit Answer
+  // 🚀 FAST SUBMIT (NON-BLOCKING)
   const handleNext = async () => {
     if (phase === "uploading") return;
 
-    dispatch(setPhase("uploading"));
     setMicActive(false);
 
+    // 🟢 Stop recording
+    const audioBlob = await stopRecording();
+
+    // 🟢 Prepare form data
+    const formData = new FormData();
+    formData.append("sessionId", sessionId);
+    formData.append("submittedEarly", true);
+
+    if (audioBlob) {
+      formData.append("audio", audioBlob, "answer.webm");
+    }
+
+    // ⚡ INSTANT UI CHANGE
+    dispatch(setPhase("reading"));
+    setAnsweredQuestions((prev) => [...prev, currentIndex]);
+
     try {
-      const audioBlob = await stopRecording();
-
-      const formData = new FormData();
-
-      formData.append("sessionId", sessionId);
-      formData.append("submittedEarly", true);
-
-      // ✅ ADD AUDIO
-      if (audioBlob) {
-        formData.append("audio", audioBlob, "answer.webm");
-      }
-
-      const res = await api.post("/assessment/answer", formData, {
+      // 🔥 DO NOT AWAIT (background call)
+      const resPromise = api.post("/assessment/answer", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (res.data.completed) {
-        console.log("Assessment completed", res.data);
+      resPromise.then((res) => {
+        if (res.data.completed) {
+          dispatch(resetAssessment());
 
-        dispatch(resetAssessment()); // ✅ CLEAR STATE
+          navigate(`/result/${sessionId}`, {
+            state: res.data,
+          });
+          return;
+        }
 
-        // Fix: Route requires the session ID parameter
-        navigate(`/result/${sessionId}`, {
-          state: res.data, // send result to result page
-        });
-
-        return;
-      }
-
-      const nextQuestion = res.data.nextQuestion;
-
-      dispatch(setNextQuestion(nextQuestion));
-
-      setAnsweredQuestions((prev) => [...prev, currentIndex]);
+        // 🔁 Sync next question from backend
+        const nextQuestion = res.data.nextQuestion;
+        dispatch(setNextQuestion(nextQuestion));
+      });
     } catch (err) {
       console.error("Submit failed", err);
     }
@@ -176,19 +176,17 @@ const Interview = () => {
           <div className="bg-white rounded-t-2xl shadow-sm border border-slate-200 border-b-0 p-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-slate-800">
               Question {currentIndex + 1}{" "}
-              <span className="text-slate-400 text-lg">/ {totalQuestions}</span>
+              <span className="text-slate-400 text-lg">
+                / {totalQuestions}
+              </span>
             </h2>
 
             <Button
               onClick={handleNext}
-              disabled={phase === "uploading" || phase === "reading"}
-              className={`${
-                phase === "uploading"
-                  ? "bg-slate-400!"
-                  : "bg-blue-600! hover:bg-blue-700!"
-              }`}
+              disabled={phase === "reading"}
+              className="bg-blue-600! hover:bg-blue-700!"
             >
-              {phase === "uploading" ? "Saving..." : "Submit Answer"}
+              Submit Answer
             </Button>
           </div>
 
@@ -199,7 +197,9 @@ const Interview = () => {
                 Weight: {question.weight}x
               </span>
 
-              <h3 className="text-3xl mt-6 text-slate-800">{question.text}</h3>
+              <h3 className="text-3xl mt-6 text-slate-800">
+                {question.text}
+              </h3>
             </div>
 
             {/* Mic Section */}

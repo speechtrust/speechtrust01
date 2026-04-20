@@ -23,8 +23,6 @@ const startAssessment = asyncHandler(async (req, res) => {
     }
     const totalQuestions = await Question.countDocuments();
 
-
-
     return res
         .status(200)
         .json(
@@ -62,28 +60,43 @@ const submitAnswer = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Audio file is required");
     }
 
-    // Send audio to Python
-    const pythonResponse = await axios.post(
-        "http://127.0.0.1:8000/analyze",
-        {
-            file_path: path.resolve(req.file.path),
-            question_text: currentQuestion.text
-        }
-    );
+    // 🟡 Step 1: Save empty attempt immediately
+const attempt = await Attempt.create({
+    session: session._id,
+    question: currentQuestion._id,
+    transcript: "",
+    score: 0,
+    weight: currentQuestion.weight,
+    submittedEarly: submittedEarly || false,
+    breakdown: {},
+    metrics: {}
+});
 
+
+// 🟡 Step 2: Run Python in background (NO AWAIT)
+axios.post(
+    "http://127.0.0.1:8000/analyze",
+    {
+        file_path: path.resolve(req.file.path),
+        question_text: currentQuestion.text
+    }
+)
+.then(async (pythonResponse) => {
     const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
 
-    // Save attempt
-    await Attempt.create({
-        session: session._id,
-        question: currentQuestion._id,
+    // 🔥 Update attempt later
+    await Attempt.findByIdAndUpdate(attempt._id, {
         transcript,
         score: confidence_score,
-        weight: currentQuestion.weight,
-        submittedEarly: submittedEarly || false,
-        breakdown: pythonResponse.data.score_breakdown,
-        metrics: pythonResponse.data.metrics
+        breakdown: score_breakdown,
+        metrics
     });
+
+    console.log("✅ Background processing done");
+})
+.catch(err => {
+    console.error("❌ Python processing failed", err.message);
+});
 
     // Move to next question
     session.currentQuestionIndex += 1;
@@ -195,11 +208,35 @@ const finishAssessment = asyncHandler(async (req, res) => {
     const durationMs = session.updatedAt - session.createdAt;
     const durationSeconds = Math.floor(durationMs / 1000);
 
-    return res.status(200).json({
-        completed: true,
-        finalScore,
-        duration: durationSeconds
-    });
+    // 🔥 SAME LOGIC AS submitAnswer (IMPORTANT)
+let totalFillers = 0;
+let avgWPS = 0;
+let avgRelevance = 0;
+let totalPause = 0;
+
+attempts.forEach(a => {
+    totalFillers += a.metrics?.filler_count || 0;
+    avgWPS += a.metrics?.words_per_second || 0;
+    avgRelevance += a.metrics?.relevance_similarity || 0;
+    totalPause += a.metrics?.long_pause_count || 0;
+});
+
+const count = attempts.length || 1;
+
+const analytics = {
+    filler_count: totalFillers,
+    words_per_second: (avgWPS / count).toFixed(2),
+    relevance: (avgRelevance / count).toFixed(2),
+    pause_count: totalPause
+};
+
+return res.status(200).json({
+    completed: true,
+    finalScore,
+    duration: durationSeconds,
+    analytics,
+    attempts
+});
 });
 
 const getHistory = asyncHandler(async (req, res) => {
