@@ -9,13 +9,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Home,
-  Clock,
-  Target,
-  Mic,
-  Activity,
-} from "lucide-react";
+import { Home, Clock, Target, Mic, Activity, Loader2 } from "lucide-react";
 import {
   Radar,
   RadarChart,
@@ -28,40 +22,62 @@ import api from "@/api/api";
 import { useEffect, useState } from "react";
 
 const Result = () => {
-  const location = useLocation();
   const navigate = useNavigate();
 
   const { id } = useParams();
 
-  const [resultData, setResultData] = useState(location.state || null);
-  const [isLoading, setIsLoading] = useState(!location.state);
+  const [resultData, setResultData] = useState(null);
+  const [isPolling, setIsPolling] = useState(true);
 
   useEffect(() => {
+    let intervalId;
+
     const fetchSessionData = async () => {
-      if (!location.state && id) {
-        try {
-          const res = await api.get(`/assessment/result/${id}`);
-          setResultData(res.data.data);
-        } catch (err) {
-          console.error("Failed to fetch session details", err);
-        } finally {
-          setIsLoading(false);
+      try {
+        const res = await api.get(`/assessment/result/${id}`);
+        const data = res.data.data;
+
+        if (data.isProcessing) {
+          setIsPolling(true);
+        } else {
+          setResultData(data);
+          setIsPolling(false);
+          clearInterval(intervalId);
         }
+      } catch (err) {
+        console.error("Failed to fetch session details", err);
+        setIsPolling(false);
+        clearInterval(intervalId);
       }
     };
-    fetchSessionData();
-  }, [id, location.state]);
 
-  if (isLoading) {
+    fetchSessionData();
+
+
+    if (isPolling) {
+      intervalId = setInterval(fetchSessionData, 3000);
+    }
+
+    return () => clearInterval(intervalId);
+  }, [id, isPolling]);
+
+
+  if (isPolling || !resultData) {
     return (
-      <div className="h-screen w-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-500 font-medium animate-pulse">
-          Loading analysis...
-        </p>
+      <div className="h-screen w-screen bg-slate-50 flex flex-col items-center justify-center gap-5">
+        <Loader2 className="text-indigo-600 animate-spin" size={54} />
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+            AI is analyzing your answers...
+          </h2>
+          <p className="text-slate-500 font-medium mt-2 max-w-md mx-auto">
+            We are extracting your voice metrics and computing your final
+            confidence score. This may take up to 20 seconds.
+          </p>
+        </div>
       </div>
     );
   }
-
   if (!resultData) {
     return (
       <div className="h-screen w-screen bg-slate-50 flex items-center justify-center flex-col gap-4">
@@ -115,7 +131,7 @@ const Result = () => {
     };
   };
 
-const avg = (key) => {
+  const avg = (key) => {
     if (!attempts.length) return 0;
     return (
       attempts.reduce((sum, a) => sum + (a.metrics?.[key] || 0), 0) /
@@ -204,7 +220,7 @@ const avg = (key) => {
     return `${m}m ${s}s`;
   };
 
-const clamp = (val) => Math.max(0, Math.min(100, val));
+  const clamp = (val) => Math.max(0, Math.min(100, val));
 
   const performanceData = [
     {
@@ -227,10 +243,10 @@ const clamp = (val) => Math.max(0, Math.min(100, val));
       A: clamp(Math.round(100 - avg("filler_count") * 10)),
       fullMark: 100,
     },
-    { 
-      subject: "Confidence", 
-      A: clamp(finalScore), 
-      fullMark: 100 
+    {
+      subject: "Confidence",
+      A: clamp(finalScore),
+      fullMark: 100,
     },
   ];
 
@@ -319,7 +335,7 @@ const clamp = (val) => Math.max(0, Math.min(100, val));
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-700">
               <p>Filler Words: {analytics.filler_count}</p>
-<p>Speech Rate: {analytics.words_per_second} words/sec</p>
+              <p>Speech Rate: {analytics.words_per_second} words/sec</p>
               <p>Pauses: {analytics.pause_count}</p>
               <p>
                 <p>Relevance: {(analytics.relevance * 100).toFixed(1)}%</p>
@@ -382,7 +398,9 @@ const clamp = (val) => Math.max(0, Math.min(100, val));
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Button
-              onClick={() => navigate("/dashboard", { state: { defaultTab: "history" } })}
+              onClick={() =>
+                navigate("/dashboard", { state: { defaultTab: "history" } })
+              }
               className="flex-1 h-12 text-base bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200"
             >
               <Home className="mr-2" size={20} />

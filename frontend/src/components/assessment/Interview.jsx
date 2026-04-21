@@ -72,10 +72,53 @@ const Interview = () => {
     };
   }, []);
 
-  const handleNext = async () => {
+  // const handleNext = async () => {
+  //   if (phase === "uploading") return;
+
+  //   setMicActive(false);
+
+  //   const audioBlob = await stopRecording();
+
+  //   const formData = new FormData();
+  //   formData.append("sessionId", sessionId);
+  //   formData.append("submittedEarly", true);
+
+  //   if (audioBlob) {
+  //     formData.append("audio", audioBlob, "answer.webm");
+  //   }
+
+  
+  //   dispatch(setPhase("reading"));
+  //   setAnsweredQuestions((prev) => [...prev, currentIndex]);
+
+  //   try {
+  //     const resPromise = api.post("/assessment/answer", formData, {
+  //       headers: { "Content-Type": "multipart/form-data" },
+  //     });
+
+  //     resPromise.then((res) => {
+  //       if (res.data.completed) {
+  //         dispatch(resetAssessment());
+
+  //         navigate(`/result/${sessionId}`, {
+  //           state: res.data,
+  //         });
+  //         return;
+  //       }
+
+  //       // 🔁 Sync next question from backend
+  //       const nextQuestion = res.data.nextQuestion;
+  //       dispatch(setNextQuestion(nextQuestion));
+  //     });
+  //   } catch (err) {
+  //     console.error("Submit failed", err);
+  //   }
+  // };
+const handleNext = async () => {
     if (phase === "uploading") return;
 
     setMicActive(false);
+    dispatch(setPhase("uploading"));
 
     const audioBlob = await stopRecording();
 
@@ -87,31 +130,24 @@ const Interview = () => {
       formData.append("audio", audioBlob, "answer.webm");
     }
 
-  
-    dispatch(setPhase("reading"));
-    setAnsweredQuestions((prev) => [...prev, currentIndex]);
-
     try {
-      const resPromise = api.post("/assessment/answer", formData, {
+      const res = await api.post("/assessment/answer", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      resPromise.then((res) => {
-        if (res.data.completed) {
-          dispatch(resetAssessment());
+      if (res.data.completed) {
+        dispatch(resetAssessment());
+        navigate(`/result/${sessionId}`);
+        return;
+      }
 
-          navigate(`/result/${sessionId}`, {
-            state: res.data,
-          });
-          return;
-        }
+      const nextQuestion = res.data.nextQuestion;
+      dispatch(setNextQuestion(nextQuestion));
+      setAnsweredQuestions((prev) => [...prev, currentIndex]);
 
-        // 🔁 Sync next question from backend
-        const nextQuestion = res.data.nextQuestion;
-        dispatch(setNextQuestion(nextQuestion));
-      });
     } catch (err) {
       console.error("Submit failed", err);
+      dispatch(setPhase("reading"));
     }
   };
 
