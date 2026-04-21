@@ -6,7 +6,7 @@ const app = express()
 
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "https://speechtrust01-p64h.vercel.app"],
   methods: ["GET", "POST"],
   credentials: true
 }));
