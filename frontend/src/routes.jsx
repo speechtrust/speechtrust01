@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom.jsx"
+import { createBrowserRouter } from "react-router-dom"
 import HomePage from "./components/home/HomePage.jsx";
 import Dashboard from "./components/dashboard/Hero.jsx";
 import Interview from "./components/assessment/Interview.jsx";
