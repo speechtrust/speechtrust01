@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import List
 import whisper
 import librosa
 import os
@@ -13,7 +14,6 @@ app = FastAPI()
 # Global models
 model = None
 embedding_model = None
-
 
 # ------------------------
 # Load models on startup
@@ -36,7 +36,8 @@ def load_models():
 # ------------------------
 class AudioRequest(BaseModel):
     file_path: str
-    question_text: str
+    ideal_answer: str     # 🔥 Updated from question_text
+    keywords: List[str]   # 🔥 Added keywords array
 
 
 # ------------------------
@@ -62,8 +63,7 @@ def analyze_audio(request: AudioRequest):
     # ------------------------
     result = model.transcribe(file_path)
     transcript = result["text"]
-    question_text = request.question_text
-
+    
     words = transcript.split()
     word_count = len(words)
 
@@ -147,29 +147,46 @@ def analyze_audio(request: AudioRequest):
         pause_penalty = 0
 
     # ------------------------
-    # 6️⃣ Semantic Relevance
+    # 6️⃣ Semantic Relevance (🔥 UPDATED to use Ideal Answer)
     # ------------------------
-    question_embedding = embedding_model.encode(question_text)
+    ideal_embedding = embedding_model.encode(request.ideal_answer)
     answer_embedding = embedding_model.encode(transcript)
 
     similarity = float(cosine_similarity(
-        [question_embedding],
+        [ideal_embedding],
         [answer_embedding]
     )[0][0])
 
-    if similarity > 0.45:
+    if similarity > 0.60:
         relevance_score = 25
-    elif similarity > 0.30:
+    elif similarity > 0.45:
         relevance_score = 15
-    elif similarity > 0.22:
+    elif similarity > 0.30:
         relevance_score = 0
-    elif similarity > 0.18:
+    elif similarity > 0.15:
         relevance_score = -10
     else:
         relevance_score = -25
 
     # ------------------------
-    # 7️⃣ Final Confidence Score
+    # 6.5️⃣ Keyword Matching (🔥 NEW FEATURE)
+    # ------------------------
+    keyword_score = 0
+    if request.keywords and len(request.keywords) > 0:
+        matched_keywords = sum(1 for kw in request.keywords if kw.lower() in transcript_lower)
+        match_ratio = matched_keywords / len(request.keywords)
+        
+        if match_ratio >= 0.75:
+            keyword_score = 15
+        elif match_ratio >= 0.40:
+            keyword_score = 10
+        elif match_ratio > 0:
+            keyword_score = 5
+        else:
+            keyword_score = -10 # Penalty for missing crucial technical terms!
+
+    # ------------------------
+    # 7️⃣ Final Confidence Score (🔥 Includes keyword score)
     # ------------------------
     confidence_score = min(
         max(
@@ -177,7 +194,8 @@ def analyze_audio(request: AudioRequest):
             - filler_penalty
             - pause_penalty
             + rate_score
-            + relevance_score,
+            + relevance_score
+            + keyword_score,
             40
         ),
         100
@@ -192,6 +210,7 @@ def analyze_audio(request: AudioRequest):
         "score_breakdown": {
             "base_score": base_score,
             "relevance_score": relevance_score,
+            "keyword_score": keyword_score,
             "rate_score": rate_score,
             "filler_penalty": filler_penalty,
             "pause_penalty": pause_penalty
@@ -206,5 +225,4 @@ def analyze_audio(request: AudioRequest):
         }
     }
 
-# venv\Scripts\activate
-# python -m uvicorn app:app --port 8000
+#python -m uvicorn app:app --port 8000

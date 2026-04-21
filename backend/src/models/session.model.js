@@ -6,6 +6,11 @@ const sessionSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    assessment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AssessmentData',
+        required: true // Tracks which test they are currently taking
+    },
     currentQuestionIndex: {
         type: Number,
         default: 0
@@ -19,7 +24,6 @@ const sessionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     }
-}, { timestamps: true }
-);
+}, { timestamps: true });
 
 export const Session = mongoose.model('Session', sessionSchema);
