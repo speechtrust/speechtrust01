@@ -40,10 +40,8 @@ export default function GlowingBackground({ children }) {
           backgroundSize: "120px 120px",
         }}
       />
-      {/* 🌑 Base */}
       <div className="absolute inset-0 bg-slate-800" />
 
-      {/* 🔵 Glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -53,7 +51,6 @@ export default function GlowingBackground({ children }) {
         }}
       />
 
-      {/* 🔹 Dot Grid */}
       <div
         className="absolute inset-0 pointer-events-none opacity-75"
         style={{
@@ -67,7 +64,6 @@ export default function GlowingBackground({ children }) {
         }}
       />
 
-      {/* 📦 Content (ONLY thing that tilts) */}
       <div
         className="relative z-10 w-full max-w-md px-4"
         style={{

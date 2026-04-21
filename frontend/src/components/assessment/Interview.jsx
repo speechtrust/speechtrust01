@@ -42,7 +42,6 @@ const Interview = () => {
 
   const timerKey = `timer-${currentIndex}-${phase}`;
 
-  // 📖 Reading Phase
   useEffect(() => {
     if (phase !== "reading") return;
 
@@ -55,7 +54,6 @@ const Interview = () => {
     return () => clearTimeout(timer);
   }, [phase, question.readTime, dispatch]);
 
-  // 🎤 Recording Phase
   useEffect(() => {
     if (phase !== "recording") return;
 
@@ -66,7 +64,6 @@ const Interview = () => {
     return () => clearTimeout(timer);
   }, [phase, question.answerTime]);
 
-  // Cleanup mic
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -75,16 +72,13 @@ const Interview = () => {
     };
   }, []);
 
-  // 🚀 FAST SUBMIT (NON-BLOCKING)
   const handleNext = async () => {
     if (phase === "uploading") return;
 
     setMicActive(false);
 
-    // 🟢 Stop recording
     const audioBlob = await stopRecording();
 
-    // 🟢 Prepare form data
     const formData = new FormData();
     formData.append("sessionId", sessionId);
     formData.append("submittedEarly", true);
@@ -93,12 +87,11 @@ const Interview = () => {
       formData.append("audio", audioBlob, "answer.webm");
     }
 
-    // ⚡ INSTANT UI CHANGE
+  
     dispatch(setPhase("reading"));
     setAnsweredQuestions((prev) => [...prev, currentIndex]);
 
     try {
-      // 🔥 DO NOT AWAIT (background call)
       const resPromise = api.post("/assessment/answer", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });

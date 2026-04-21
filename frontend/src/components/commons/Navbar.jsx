@@ -20,7 +20,6 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
         
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-8 h-8 bg-[#162456] rounded-md flex items-center justify-center group-hover:bg-[#243882] transition-colors">
             <Mic size={18} className="text-white" />
@@ -30,17 +29,14 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Right Side */}
         <div className="flex items-center gap-4">
 
-          {/* 👤 Show user name (optional but nice) */}
           {isAuthenticated && (
             <span className="hidden md:block text-sm text-slate-600 font-medium">
               Hi, {user?.firstname || "User"}
             </span>
           )}
 
-          {/* 🔐 Conditional Button */}
           {isAuthenticated ? (
             <button
               onClick={handleLogout}

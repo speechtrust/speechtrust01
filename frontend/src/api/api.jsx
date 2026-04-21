@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// 🔐 Attach token
 api.interceptors.request.use((config) => {
   const token = store.getState().user.accessToken;
 
@@ -20,7 +19,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 🚨 Auto logout on 401
 api.interceptors.response.use(
   (res) => res,
   (error) => {

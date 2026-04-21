@@ -9,7 +9,7 @@ const sessionSchema = new mongoose.Schema({
     assessment: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'AssessmentData',
-        required: true // Tracks which test they are currently taking
+        required: true
     },
     currentQuestionIndex: {
         type: Number,

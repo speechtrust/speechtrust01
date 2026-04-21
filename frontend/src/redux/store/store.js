@@ -10,7 +10,7 @@ export const store = configureStore({
   reducer: {
     assessment: assessmentReducer,
     user: userReducer,
-    result: resultReducer, // ✅ ADDED
+    result: resultReducer,
   },
   preloadedState: {
     assessment: savedAssessment || undefined,

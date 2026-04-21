@@ -18,7 +18,7 @@ export default function AuthLayout({ children }) {
     const cy = r.height / 2;
 
     setTilt({
-      x: ((cy - y) / cy) * 3, // Reduced intensity slightly for a more premium feel
+      x: ((cy - y) / cy) * 3,
       y: ((x - cx) / cx) * 3,
     });
   };
@@ -34,7 +34,6 @@ export default function AuthLayout({ children }) {
         onMouseLeave={onLeave}
         className="relative min-h-screen w-screen overflow-hidden bg-slate-50 flex items-center justify-center pt-16"
       >
-        {/* Diagonal Lines Background */}
         <div
           className="absolute inset-0 z-1 pointer-events-none opacity-[0.03]"
           style={{
@@ -46,7 +45,6 @@ export default function AuthLayout({ children }) {
           }}
         />
 
-        {/* 🔵 Mouse Tracking Glow (Light Theme) */}
         <div
           className="absolute inset-0 pointer-events-none transition-opacity duration-300"
           style={{
@@ -54,7 +52,6 @@ export default function AuthLayout({ children }) {
           }}
         />
 
-        {/* 🔹 Subtle Dot Grid */}
         <div
           className="absolute inset-0 pointer-events-none opacity-20"
           style={{
@@ -65,7 +62,6 @@ export default function AuthLayout({ children }) {
           }}
         />
 
-        {/* 📦 Content Container (Tilts on hover) */}
         <div
           className="relative z-10 w-full max-w-md px-6 py-12"
           style={{

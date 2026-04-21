@@ -1,6 +1,5 @@
 import { Mic, MicOff, Loader2 } from "lucide-react";
 
-// Removed the 'onClick' prop since the user can no longer click it
 export default function MicBar({ active, phase }) {
   const bars = [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1];
 
@@ -9,7 +8,6 @@ export default function MicBar({ active, phase }) {
   return (
     <div className="flex flex-col items-center gap-4">
       <div
-        // Removed onClick handler and all cursor/hover utility classes
         className={`w-105 h-28 mx-auto flex items-center justify-center gap-6 rounded-2xl px-6 transition-all duration-300 ${
           isDisabled 
             ? "bg-slate-200 opacity-70" 
@@ -44,7 +42,6 @@ export default function MicBar({ active, phase }) {
         <Wave bars={bars} active={active} />
       </div>
       
-      {/* Updated the helper text to reflect the automatic behavior */}
       <p className="text-sm font-medium text-slate-500 h-5">
         {phase === "reading" && "Microphone will turn on automatically..."}
         {phase === "recording" && "Recording in progress... Speak now."}

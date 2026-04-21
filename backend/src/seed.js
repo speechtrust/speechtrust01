@@ -153,11 +153,11 @@ const seedDatabase = async () => {
             });
         }
 
-        console.log("✅ Successfully injected 3 Assessments and 15 Questions.");
+        console.log("Successfully injected 3 Assessments and 15 Questions.");
         process.exit(0);
 
     } catch (error) {
-        console.error("❌ Error seeding database:", error);
+        console.error("Error seeding database:", error);
         process.exit(1);
     }
 };

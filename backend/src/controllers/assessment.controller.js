@@ -2,9 +2,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Session } from "../models/session.model.js";
 import { Question } from "../models/question.model.js";
 import { Attempt } from "../models/attempt.model.js";
-import { AssessmentData } from "../models/assessmentData.model.js"; // 🔥 Added AssessmentData Import
+import { AssessmentData } from "../models/assessmentData.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import fs from "fs";
 
 import path from "path";
 import axios from "axios";
@@ -13,7 +14,6 @@ const startAssessment = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     let { assessmentId } = req.body || {};
 
-    // 🔥 If frontend doesn't send an ID, default to the active one we just seeded
     if (!assessmentId) {
         const defaultAssessment = await AssessmentData.findOne({ isActive: true });
         if (!defaultAssessment) throw new ApiError(404, "No active assessments found");
@@ -22,17 +22,15 @@ const startAssessment = asyncHandler(async (req, res) => {
 
     const session = await Session.create({
         user: userId,
-        assessment: assessmentId // 🔥 Now tracking WHICH test they are taking
+        assessment: assessmentId
     });
 
-    // 🔥 Fetch first question FOR THIS SPECIFIC ASSESSMENT
     const firstQuestion = await Question.findOne({ assessment: assessmentId }).sort({ order: 1 });
 
     if (!firstQuestion) {
         throw new ApiError(404, "No questions found");
     }
-    
-    // 🔥 Count questions scoped to this assessment
+
     const totalQuestions = await Question.countDocuments({ assessment: assessmentId });
 
     return res
@@ -59,7 +57,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid or completed session");
     }
 
-    // 🔥 Get current question FOR THIS SPECIFIC ASSESSMENT
     const currentQuestion = await Question.findOne({
         assessment: session.assessment,
         order: session.currentQuestionIndex + 1
@@ -73,7 +70,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Audio file is required");
     }
 
-    // 🟡 Step 1: Save empty attempt immediately
     const attempt = await Attempt.create({
         session: session._id,
         question: currentQuestion._id,
@@ -85,42 +81,45 @@ const submitAnswer = asyncHandler(async (req, res) => {
         metrics: {}
     });
 
-    // 🟡 Step 2: Run Python in background (NO AWAIT)
     axios.post(
         "http://127.0.0.1:8000/analyze",
         {
             file_path: path.resolve(req.file.path),
-            ideal_answer: currentQuestion.ideal_answer, // 🔥 SENDING IDEAL ANSWER!
-            keywords: currentQuestion.keywords || []    // 🔥 SENDING KEYWORDS!
+            ideal_answer: currentQuestion.ideal_answer, 
+            keywords: currentQuestion.keywords || [] 
         }
     )
-    .then(async (pythonResponse) => {
-        const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
+        .then(async (pythonResponse) => {
+            const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
 
-        // 🔥 Update attempt later
-        await Attempt.findByIdAndUpdate(attempt._id, {
-            transcript,
-            score: confidence_score,
-            breakdown: score_breakdown,
-            metrics
+            await Attempt.findByIdAndUpdate(attempt._id, {
+                transcript,
+                score: confidence_score,
+                breakdown: score_breakdown,
+                metrics
+            });
+
+            console.log("Background processing done");
+        })
+        .catch(err => {
+            console.error("Python processing failed", err.message);
+        })
+        .finally(() => {
+            if (req.file && req.file.path) {
+                fs.unlink(req.file.path, (err) => {
+                    if (err) console.error("Failed to delete audio file:", err);
+                    else console.log("Audio file deleted from server.");
+                });
+            }
         });
 
-        console.log("✅ Background processing done");
-    })
-    .catch(err => {
-        console.error("❌ Python processing failed", err.message);
-    });
-
-    // Move to next question
     session.currentQuestionIndex += 1;
     await session.save();
 
-    // 🔥 Scope total questions check to this assessment
     const totalQuestions = await Question.countDocuments({ assessment: session.assessment });
 
     if (session.currentQuestionIndex >= totalQuestions) {
 
-        // 🔥 GET ATTEMPTS FIRST
         const attempts = await Attempt.find({ session: session._id });
 
         let totalFillers = 0;
@@ -173,7 +172,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
         });
     }
 
-    // ✅ Otherwise send next question for this assessment
     const nextQuestion = await Question.findOne({
         assessment: session.assessment,
         order: session.currentQuestionIndex + 1
@@ -253,7 +251,6 @@ const finishAssessment = asyncHandler(async (req, res) => {
 const getHistory = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
-    // Fetch history, optionally you can populate 'assessment' here later if you want titles in history
     const sessions = await Session.find({ user: userId, status: "completed" })
         .sort({ createdAt: -1 });
 

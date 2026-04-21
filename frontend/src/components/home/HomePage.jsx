@@ -10,10 +10,8 @@ export default function HomePage() {
     <div className="min-h-screen w-full bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       <Navbar />
 
-      {/* --- HERO SECTION --- */}
       <section id="home" className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden flex items-center justify-center text-center px-6">
         
-        {/* Subtle Background Effects */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-40"
              style={{
                backgroundImage: "radial-gradient(circle, rgba(79, 70, 229, 0.15) 1px, transparent 1px)",
@@ -58,8 +56,6 @@ export default function HomePage() {
         </div>
       </section>
 
-
-      {/* --- ABOUT US / HOW IT WORKS SECTION --- */}
       <section id="about" className="py-24 bg-white border-t border-slate-100 px-6">
         <div className="max-w-7xl mx-auto">
           

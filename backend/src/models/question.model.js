@@ -4,7 +4,7 @@ const questionSchema = new mongoose.Schema({
     assessment: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'AssessmentData',
-        required: true // Links this question to a specific test
+        required: true
     },
     text: { 
         type: String, 
@@ -15,7 +15,7 @@ const questionSchema = new mongoose.Schema({
         required: true 
     },
     keywords: [{ 
-        type: String // Array of essential technical terms
+        type: String
     }],
     readTime: { 
         type: Number, 

@@ -11,9 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Home,
-  RotateCcw,
   Clock,
-  Trophy,
   Target,
   Mic,
   Activity,
@@ -33,14 +31,11 @@ const Result = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fix 1: Get the ID from the URL (which matches Hero.jsx navigation)
   const { id } = useParams();
 
-  // Fix 2: Use state to hold the data so we can fetch it if needed
   const [resultData, setResultData] = useState(location.state || null);
   const [isLoading, setIsLoading] = useState(!location.state);
 
-  // Fix 3: Fetch the data from the backend if accessed from the Dashboard History
   useEffect(() => {
     const fetchSessionData = async () => {
       if (!location.state && id) {
@@ -80,10 +75,8 @@ const Result = () => {
     );
   }
 
-  // Extract the data from our new state variable
   const { finalScore = 0, duration = 0, attempts = [] } = resultData;
 
-  // --- Helper Functions for Dynamic UI ---
   const getScoreDetails = (score) => {
     if (score >= 80)
       return {
@@ -122,27 +115,26 @@ const Result = () => {
     };
   };
 
-  const avg = (key) => {
+const avg = (key) => {
     if (!attempts.length) return 0;
-    return Math.round(
+    return (
       attempts.reduce((sum, a) => sum + (a.metrics?.[key] || 0), 0) /
-        attempts.length,
+      attempts.length
     );
   };
 
-const analytics = resultData.analytics || {
-  filler_count: avg("filler_count"),
-  words_per_second: avg("words_per_second"),
-  relevance: avg("relevance_similarity"),
-  pause_count: avg("long_pause_count"),
-};
+  const analytics = resultData.analytics || {
+    filler_count: Math.round(avg("filler_count")),
+    words_per_second: avg("words_per_second"),
+    relevance: avg("relevance_similarity"),
+    pause_count: Math.round(avg("long_pause_count")),
+  };
 
   const generateFeedback = (analytics, score) => {
     if (!analytics) return "No analysis available.";
 
     let feedback = [];
 
-    // 🎯 Filler words
     if (analytics.filler_count > 8) {
       feedback.push(
         "You used a high number of filler words. Try to pause instead of using fillers like 'um' or 'uh'.",
@@ -153,7 +145,6 @@ const analytics = resultData.analytics || {
       );
     }
 
-    // ⚡ Speaking speed
     if (analytics.words_per_second < 1.5) {
       feedback.push(
         "Your speaking pace was a bit slow. Try to speak more naturally and confidently.",
@@ -166,7 +157,6 @@ const analytics = resultData.analytics || {
       feedback.push("Your speaking pace was well balanced.");
     }
 
-    // 🧠 Relevance
     if (analytics.relevance < 0.2) {
       feedback.push(
         "Your answers were not very relevant to the questions. Focus on addressing the question directly.",
@@ -192,7 +182,6 @@ const analytics = resultData.analytics || {
       );
     }
 
-    // 🏁 Overall score
     if (score > 80) {
       feedback.push("Overall, excellent performance. Keep it up!");
     } else if (score > 60) {
@@ -209,37 +198,40 @@ const analytics = resultData.analytics || {
   const details = getScoreDetails(finalScore);
   const aiFeedback = generateFeedback(analytics, finalScore);
 
-  // Format duration from seconds to MM:SS
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}m ${s}s`;
   };
 
-  const clamp = (val) => Math.max(0, Math.min(100, val));
+const clamp = (val) => Math.max(0, Math.min(100, val));
 
   const performanceData = [
     {
       subject: "Fluency",
-      A: clamp(avg("words_per_second") * 20),
+      A: clamp(Math.round(avg("words_per_second") * 20)),
       fullMark: 100,
     },
     {
       subject: "Pauses",
-      A: clamp(100 - avg("silence_ratio") * 100),
+      A: clamp(Math.round(100 - avg("silence_ratio") * 100)),
       fullMark: 100,
     },
     {
       subject: "Relevance",
-      A: clamp(avg("relevance_similarity") * 100),
+      A: clamp(Math.round(avg("relevance_similarity") * 100)),
       fullMark: 100,
     },
     {
       subject: "Clarity",
-      A: clamp(100 - avg("filler_count") * 10),
+      A: clamp(Math.round(100 - avg("filler_count") * 10)),
       fullMark: 100,
     },
-    { subject: "Confidence", A: clamp(finalScore), fullMark: 100 },
+    { 
+      subject: "Confidence", 
+      A: clamp(finalScore), 
+      fullMark: 100 
+    },
   ];
 
   return (
@@ -263,7 +255,6 @@ const analytics = resultData.analytics || {
       </div>
 
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* --- LEFT COLUMN: Main Score & Summary --- */}
         <div className="md:col-span-1 space-y-6">
           {/* Main Score Card */}
           <Card className="shadow-sm border-slate-200 text-center pt-6">
@@ -337,7 +328,6 @@ const analytics = resultData.analytics || {
           </Card>
         </div>
 
-        {/* --- RIGHT COLUMN: Chart & Detailed Feedback --- */}
         <div className="md:col-span-2 space-y-6">
           {/* Chart Card */}
           <Card className="shadow-sm border-slate-200 h-[320px] flex flex-col">
@@ -376,7 +366,6 @@ const analytics = resultData.analytics || {
             </CardContent>
           </Card>
 
-          {/* AI Feedback Card */}
           <Card className="shadow-sm border-slate-200 bg-white">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -391,10 +380,9 @@ const analytics = resultData.analytics || {
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/dashboard", { state: { defaultTab: "history" } })}
               className="flex-1 h-12 text-base bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200"
             >
               <Home className="mr-2" size={20} />

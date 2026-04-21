@@ -7,7 +7,7 @@ import os
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-print("All imports done ✅")
+print("All imports done")
 
 app = FastAPI()
 
@@ -15,42 +15,35 @@ app = FastAPI()
 model = None
 embedding_model = None
 
-# ------------------------
 # Load models on startup
-# ------------------------
 @app.on_event("startup")
 def load_models():
     global model, embedding_model
 
     print("Loading Whisper model...")
     model = whisper.load_model("base")
-    print("Whisper loaded ✅")
+    print("Whisper loaded")
 
     print("Loading embedding model...")
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    print("Embedding model loaded ✅")
+    print("Embedding model loaded")
 
 
-# ------------------------
+
 # Request Schema
-# ------------------------
 class AudioRequest(BaseModel):
     file_path: str
-    ideal_answer: str     # 🔥 Updated from question_text
-    keywords: List[str]   # 🔥 Added keywords array
+    ideal_answer: str   
+    keywords: List[str]   
 
 
-# ------------------------
 # Root Route
-# ------------------------
 @app.get("/")
 def home():
-    return {"message": "SpeechTrust Python service running 🚀"}
+    return {"message": "SpeechTrust Python service running"}
 
 
-# ------------------------
 # Analyze Endpoint
-# ------------------------
 @app.post("/analyze")
 def analyze_audio(request: AudioRequest):
     file_path = request.file_path
@@ -58,30 +51,24 @@ def analyze_audio(request: AudioRequest):
     if not os.path.exists(file_path):
         return {"error": "File not found"}
 
-    # ------------------------
-    # 1️⃣ Transcription
-    # ------------------------
+    #Transcription
     result = model.transcribe(file_path)
     transcript = result["text"]
     
     words = transcript.split()
     word_count = len(words)
 
-    # ------------------------
-    # 2️⃣ Base Score
-    # ------------------------
+    #Base Score
     if word_count < 5:
-        base_score = 40
+        base_score = 50
     elif word_count < 15:
-        base_score = 55
-    elif word_count < 30:
         base_score = 65
+    elif word_count < 30:
+        base_score = 75
     else:
-        base_score = 70
+        base_score = 80
 
-    # ------------------------
-    # 3️⃣ Filler Detection
-    # ------------------------
+    #Filler Detection
     fillers = ["um", "uh", "ah", "like", "you know", "basically", "actually"]
 
     transcript_lower = transcript.lower()
@@ -97,9 +84,7 @@ def analyze_audio(request: AudioRequest):
     else:
         filler_penalty = 0
 
-    # ------------------------
-    # 4️⃣ Speech Rate
-    # ------------------------
+    #Speech Rate
     y, sr = librosa.load(file_path, sr=None)
     duration = librosa.get_duration(y=y, sr=sr)
 
@@ -115,9 +100,7 @@ def analyze_audio(request: AudioRequest):
     else:
         rate_score = 0
 
-    # ------------------------
-    # 5️⃣ Pause Detection
-    # ------------------------
+    #Pause Detection
     intervals = librosa.effects.split(y, top_db=30)
 
     speaking_time = 0
@@ -146,9 +129,7 @@ def analyze_audio(request: AudioRequest):
     else:
         pause_penalty = 0
 
-    # ------------------------
-    # 6️⃣ Semantic Relevance (🔥 UPDATED to use Ideal Answer)
-    # ------------------------
+    #Relevance
     ideal_embedding = embedding_model.encode(request.ideal_answer)
     answer_embedding = embedding_model.encode(transcript)
 
@@ -157,37 +138,31 @@ def analyze_audio(request: AudioRequest):
         [answer_embedding]
     )[0][0])
 
-    if similarity > 0.60:
-        relevance_score = 25
-    elif similarity > 0.45:
+    if similarity > 0.50:
+        relevance_score = 20
+    elif similarity > 0.35:
         relevance_score = 15
-    elif similarity > 0.30:
-        relevance_score = 0
-    elif similarity > 0.15:
-        relevance_score = -10
+    elif similarity > 0.20:
+        relevance_score = 5
     else:
-        relevance_score = -25
+        relevance_score = 0
 
-    # ------------------------
-    # 6.5️⃣ Keyword Matching (🔥 NEW FEATURE)
-    # ------------------------
+    #Keyword Matching
     keyword_score = 0
     if request.keywords and len(request.keywords) > 0:
         matched_keywords = sum(1 for kw in request.keywords if kw.lower() in transcript_lower)
         match_ratio = matched_keywords / len(request.keywords)
         
-        if match_ratio >= 0.75:
+        if match_ratio >= 0.60:
             keyword_score = 15
-        elif match_ratio >= 0.40:
+        elif match_ratio >= 0.30:
             keyword_score = 10
         elif match_ratio > 0:
             keyword_score = 5
         else:
-            keyword_score = -10 # Penalty for missing crucial technical terms!
+            keyword_score = 0
 
-    # ------------------------
-    # 7️⃣ Final Confidence Score (🔥 Includes keyword score)
-    # ------------------------
+    #Final Confidence Score
     confidence_score = min(
         max(
             base_score
@@ -201,9 +176,7 @@ def analyze_audio(request: AudioRequest):
         100
     )
 
-    # ------------------------
-    # 8️⃣ Response
-    # ------------------------
+    #Response
     return {
         "transcript": transcript,
         "confidence_score": confidence_score,
