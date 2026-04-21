@@ -82,7 +82,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     });
 
     axios.post(
-        "http://127.0.0.1:8000/analyze",
+        "https://speechtrust-speechtrust-ai.hf.space/analyze",
         {
             file_path: path.resolve(req.file.path),
             ideal_answer: currentQuestion.ideal_answer, 
