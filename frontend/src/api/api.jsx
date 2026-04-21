@@ -2,7 +2,7 @@ import axios from "axios";
 import { store } from "@/redux/store/store";
 
 const api = axios.create({
-  baseURL: "http://localhost:8050/api/v1",
+  baseURL: "https://speechtrust01.onrender.com/api/v1",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
