@@ -215,7 +215,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
     formData.append("ideal_answer", currentQuestion.ideal_answer);
     formData.append("keywords", (currentQuestion.keywords || []).join(","));
 
-    // 🔥 Send the form to Hugging Face
     axios.post(
         "https://speechtrust-speechtrust-ai.hf.space/analyze",
         formData,
@@ -224,7 +223,6 @@ const submitAnswer = asyncHandler(async (req, res) => {
         }
     )
     .then(async (pythonResponse) => {
-        // If Hugging face throws an internal error, catch it!
         if (pythonResponse.data.error) throw new Error(pythonResponse.data.error);
 
         const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;

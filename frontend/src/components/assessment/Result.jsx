@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -68,7 +68,7 @@ const Result = () => {
         <Loader2 className="text-indigo-600 animate-spin" size={54} />
         <div className="text-center">
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            AI is analyzing your answers...
+            Analyzing your answers...
           </h2>
           <p className="text-slate-500 font-medium mt-2 max-w-md mx-auto">
             We are extracting your voice metrics and computing your final
@@ -275,7 +275,7 @@ const Result = () => {
           {/* Main Score Card */}
           <Card className="shadow-sm border-slate-200 text-center pt-6">
             <CardContent className="flex flex-col items-center">
-              <div className="relative w-40 h-40 flex items-center justify-center rounded-full border-[12px] border-slate-100 mb-4">
+              <div className="relative w-40 h-40 flex items-center justify-center rounded-full border-12 border-slate-100 mb-4">
                 {/* Simulated circular progress ring */}
                 <svg
                   className="absolute top-0 left-0 w-full h-full transform -rotate-90"
@@ -344,7 +344,7 @@ const Result = () => {
 
         <div className="md:col-span-2 space-y-6">
           {/* Chart Card */}
-          <Card className="shadow-sm border-slate-200 h-[320px] flex flex-col">
+          <Card className="shadow-sm border-slate-200 h-80 flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Target size={20} className="text-indigo-600" />
