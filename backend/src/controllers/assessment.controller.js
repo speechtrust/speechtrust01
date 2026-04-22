@@ -6,6 +6,7 @@ import { AssessmentData } from "../models/assessmentData.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs";
+import FormData from "form-data";
 
 import path from "path";
 import axios from "axios";
@@ -209,15 +210,23 @@ const submitAnswer = asyncHandler(async (req, res) => {
         metrics: {}
     });
 
+    const formData = new FormData();
+    formData.append("file", fs.createReadStream(req.file.path));
+    formData.append("ideal_answer", currentQuestion.ideal_answer);
+    formData.append("keywords", (currentQuestion.keywords || []).join(","));
+
+    // 🔥 Send the form to Hugging Face
     axios.post(
         "https://speechtrust-speechtrust-ai.hf.space/analyze",
+        formData,
         {
-            file_path: path.resolve(req.file.path),
-            ideal_answer: currentQuestion.ideal_answer, 
-            keywords: currentQuestion.keywords || [] 
+            headers: { ...formData.getHeaders() }
         }
     )
     .then(async (pythonResponse) => {
+        // If Hugging face throws an internal error, catch it!
+        if (pythonResponse.data.error) throw new Error(pythonResponse.data.error);
+
         const { transcript, confidence_score, score_breakdown, metrics } = pythonResponse.data;
         await Attempt.findByIdAndUpdate(attempt._id, {
             transcript,
@@ -230,7 +239,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     .catch(async (err) => {
         console.error("Python processing failed", err.message);
         await Attempt.findByIdAndUpdate(attempt._id, {
-            transcript: "[Audio processing failed or skipped]", // 🔥 FIX 2: Clear the processing string if it fails
+            transcript: "[Audio processing failed or skipped]", 
             score: 0,
             metrics: { filler_count: 0, words_per_second: 0, relevance_similarity: 0, long_pause_count: 0 }
         });
