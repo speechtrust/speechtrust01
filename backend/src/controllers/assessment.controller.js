@@ -201,7 +201,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     const attempt = await Attempt.create({
         session: session._id,
         question: currentQuestion._id,
-        transcript: "", // Empty for now!
+        transcript: "[PROCESSING]",
         score: 0,
         weight: currentQuestion.weight,
         submittedEarly: submittedEarly || false,
@@ -230,7 +230,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
     .catch(async (err) => {
         console.error("Python processing failed", err.message);
         await Attempt.findByIdAndUpdate(attempt._id, {
-            transcript: "[Audio processing failed or skipped]",
+            transcript: "[Audio processing failed or skipped]", // 🔥 FIX 2: Clear the processing string if it fails
             score: 0,
             metrics: { filler_count: 0, words_per_second: 0, relevance_similarity: 0, long_pause_count: 0 }
         });
@@ -382,7 +382,7 @@ const getSessionDetails = asyncHandler(async (req, res) => {
 
     const attempts = await Attempt.find({ session: sessionId });
 
-    const isProcessing = attempts.some(a => !a.metrics || Object.keys(a.metrics).length === 0);
+    const isProcessing = attempts.some(a => a.transcript === "[PROCESSING]");
 
     let finalScore = session.totalScore || 0;
     let durationSeconds = Math.floor((session.updatedAt - session.createdAt) / 1000);

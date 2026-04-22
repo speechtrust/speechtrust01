@@ -337,9 +337,7 @@ const Result = () => {
               <p>Filler Words: {analytics.filler_count}</p>
               <p>Speech Rate: {analytics.words_per_second} words/sec</p>
               <p>Pauses: {analytics.pause_count}</p>
-              <p>
-                <p>Relevance: {(analytics.relevance * 100).toFixed(1)}%</p>
-              </p>
+              <p>Relevance: {(parseFloat(analytics.relevance) * 100).toFixed(1)}%</p>
             </CardContent>
           </Card>
         </div>
