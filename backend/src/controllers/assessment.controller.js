@@ -227,10 +227,17 @@ const submitAnswer = asyncHandler(async (req, res) => {
         });
         console.log("Background processing done");
     })
-    .catch(err => console.error("Python processing failed", err.message))
+    .catch(async (err) => {
+        console.error("Python processing failed", err.message);
+        await Attempt.findByIdAndUpdate(attempt._id, {
+            transcript: "[Audio processing failed or skipped]",
+            score: 0,
+            metrics: { filler_count: 0, words_per_second: 0, relevance_similarity: 0, long_pause_count: 0 }
+        });
+    })
     .finally(() => {
         if (req.file && req.file.path) {
-            fs.unlink(req.file.path, () => {}); // Silently delete
+            fs.unlink(req.file.path, () => {});
         }
     });
 
@@ -375,7 +382,7 @@ const getSessionDetails = asyncHandler(async (req, res) => {
 
     const attempts = await Attempt.find({ session: sessionId });
 
-    const isProcessing = attempts.some(a => a.transcript === "");
+    const isProcessing = attempts.some(a => !a.metrics || Object.keys(a.metrics).length === 0);
 
     let finalScore = session.totalScore || 0;
     let durationSeconds = Math.floor((session.updatedAt - session.createdAt) / 1000);
